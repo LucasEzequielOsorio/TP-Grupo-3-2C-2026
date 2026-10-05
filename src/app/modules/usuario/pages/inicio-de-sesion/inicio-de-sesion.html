@@ -1,1 +1,1 @@
-<app-formulario-usuario [action]="'iniciar sesión'" (submit)="iniciarSesion($event)"></app-formulario-usuario>
+<app-formulario-usuario [action]="'iniciar sesión'" [errorMessage]="errorMessage()" (submit)="iniciarSesion($event)" [sent]="waitingForResponse()"></app-formulario-usuario>

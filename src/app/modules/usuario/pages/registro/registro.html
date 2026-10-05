@@ -1,1 +1,1 @@
-<app-formulario-usuario [action]="'registrarse'" (submit)="registrar($event)"></app-formulario-usuario>
+<app-formulario-usuario [action]="'registrarse'" (submit)="registrar($event)" [errorMessage]="this.errorMessage()" [sent]="waitingForResponse()"></app-formulario-usuario>
