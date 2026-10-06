@@ -7,6 +7,7 @@ export interface Usuario
 {
   id:string;
   email:string;
+  rol:string;
 }
 export interface RespuestaAuth{
     token:string;
@@ -15,6 +16,9 @@ export interface RespuestaAuth{
 }
 @Service()
 export class UsuarioService {
+  isAdmin() {
+    return localStorage.getItem('user_role') === 'admin';
+  }
 
   private http = inject(HttpClient);
   registrarUsuario(usuario:DatosFormularioUsuario):Observable<RespuestaAuth>
@@ -26,7 +30,8 @@ export class UsuarioService {
       token: '12323.123123.12123',
       usuario:{
         id:'1',
-        email:'a@a.com'
+        email:'a@a.com',
+        rol:'client'
       }
     }).pipe(delay(1500));*/
 
@@ -46,6 +51,7 @@ export class UsuarioService {
         usuario:{
           id:'1',
           email:'a@a.com'
+          rol:'client'
         }
       }).pipe(delay(1500));*/
 

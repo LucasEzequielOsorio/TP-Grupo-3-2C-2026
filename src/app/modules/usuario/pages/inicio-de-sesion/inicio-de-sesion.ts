@@ -22,6 +22,7 @@ export class InicioDeSesion {
         next: (res:RespuestaAuth)=>
         {
           localStorage.setItem("auth_token", res.token);
+          localStorage.setItem("user_role", res.usuario.rol);
           this.waitingForResponse.set(false);
         },
         error: (err)=>
