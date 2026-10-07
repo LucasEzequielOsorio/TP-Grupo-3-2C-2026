@@ -2,7 +2,7 @@ import { Component, inject, signal} from '@angular/core';
 import { FormularioUsuario } from '../../components/formulario-usuario/formulario-usuario';
 import { DatosFormularioUsuario } from '../../interfaces/datos-formulario-usuario';
 import { RespuestaAuth, UsuarioService } from '../../../../api/services/usuario.service';
-import { single } from 'rxjs';
+import { Router } from '@angular/router';
 
 @Component({
   imports: [FormularioUsuario],
@@ -12,6 +12,7 @@ import { single } from 'rxjs';
 })
 export class InicioDeSesion {
   usuarioService = inject(UsuarioService);
+  router = inject(Router)
   waitingForResponse = signal<boolean>(false);
   errorMessage = signal<string | null>('');
   iniciarSesion(datos:DatosFormularioUsuario)
@@ -24,6 +25,7 @@ export class InicioDeSesion {
           localStorage.setItem("auth_token", res.token);
           localStorage.setItem("user_role", res.usuario.rol);
           this.waitingForResponse.set(false);
+          this.router.navigate(['/tienda']);
         },
         error: (err)=>
         {

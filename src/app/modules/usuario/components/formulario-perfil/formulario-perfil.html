@@ -1,0 +1,17 @@
+<form (submit)="OnSubmit($event)">
+  <input type="text" [formField]="formulario.nombre" id="nombre" placeholder="Nombre">
+  <input type="text" [formField]="formulario.apellido" id="apellido" placeholder="Apellido">
+  <input type="date" [formField]="formulario.fechaNacimiento" id="nacimiento" placeholder="fecha de nacimiento">
+  <br>
+  <input type="text" [formField]="formulario.direccion.calle" id="calle" placeholder="calle">
+  <input type="number" [formField]="formulario.direccion.altura" id="altura" placeholder="altura">
+  <input type="text" [formField]?="formulario.direccion.edificio" id="edificio" placeholder="edificio">
+  <input type="text" [formField]?="formulario.direccion.piso" id="piso" placeholder="piso">
+  <input type="text" [formField]?="formulario.direccion.unidad" id="unidad" placeholder="unidad">
+  <input type="text" [formField]?="formulario.direccion.codigoPostal" id="condigoPostal" placeholder="Código Postal">
+  <button type="submit" [disabled]="this.sent()">Guardar</button>
+  @if(canCancel())
+  {
+    <button (click)="OnCancel()"></button>
+  }
+</form>
