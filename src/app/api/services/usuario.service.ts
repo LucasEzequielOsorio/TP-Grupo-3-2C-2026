@@ -1,8 +1,8 @@
 import { inject, Service } from '@angular/core';
 import { DatosFormularioUsuario } from '../../modules/usuario/interfaces/datos-formulario-usuario';
-import { delay, Observable, of, switchMap, throwError, timer } from 'rxjs';
-import { HttpClient, HttpStatusCode } from '@angular/common/http';
-import { DatosFormularioPerfil } from '../../modules/usuario/interfaces/datos-formulario-perfil';
+import { delay, Observable, of} from 'rxjs';
+import { HttpClient } from '@angular/common/http';
+import { DatosFormularioPerfil } from '../../modules/perfil/interfaces/datos-formulario-perfil';
 
 export interface Usuario
 {
@@ -27,6 +27,10 @@ export class UsuarioService {
       exito:true
     });
   }
+  hasProfile()
+  {
+    return this.isLogged();
+  }
   isLogged()
   {
     return localStorage.getItem('auth_token') !== null;
@@ -37,6 +41,7 @@ export class UsuarioService {
   logout()
   {
     localStorage.removeItem('auth_token');
+    localStorage.removeItem('user_role');
   }
 
   private http = inject(HttpClient);

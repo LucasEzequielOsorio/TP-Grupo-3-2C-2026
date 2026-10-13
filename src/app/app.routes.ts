@@ -14,6 +14,10 @@ export const routes: Routes = [
     loadChildren: () => import('./modules/usuario/usuario.routes').then(m => m.usuarioRoutes)
   },
   {
+    path: 'perfil',
+    loadChildren: () => import('./modules/perfil/perfil.routes').then(m => m.perfilRoutes)
+  },
+  {
     path: '',
     redirectTo: 'bienvenido',
     pathMatch: 'full'

@@ -1,4 +1,4 @@
-import { DatosDireccion } from "./datos-direccion"
+import { DatosDireccion } from "./datos-direccion";
 
 export interface DatosFormularioPerfil{
   nombre:string,

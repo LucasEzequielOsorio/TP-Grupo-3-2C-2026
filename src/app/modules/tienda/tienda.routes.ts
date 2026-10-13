@@ -1,10 +1,21 @@
 import { Routes } from "@angular/router"
-import { loggedGuard } from "./guards/logged-guard"
-import { Registro } from "../usuario/pages/registro/registro"
+import { loggedGuard } from "../../core/guards/logged-guard"
+import { Productos } from "./pages/productos/productos"
 export const tiendaRoutes:Routes = [
   {
     path: '',
     canActivate: [loggedGuard],
-    component: Registro
+    children:[
+      {
+        path: 'productos',
+        component: Productos
+      },
+      {
+        path: '',
+        redirectTo: 'productos',
+        pathMatch: "full"
+
+      }
+    ]
   }
 ]
