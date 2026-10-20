@@ -1,6 +1,7 @@
 import { Routes } from "@angular/router"
 import { loggedGuard } from "../../core/guards/logged-guard"
 import { Productos } from "./pages/productos/productos"
+import { VerProducto } from "./pages/ver-producto/ver-producto"
 export const tiendaRoutes:Routes = [
   {
     path: '',
@@ -11,10 +12,13 @@ export const tiendaRoutes:Routes = [
         component: Productos
       },
       {
+        path: 'producto/:id',
+        component: VerProducto
+      },
+      {
         path: '',
         redirectTo: 'productos',
         pathMatch: "full"
-
       }
     ]
   }

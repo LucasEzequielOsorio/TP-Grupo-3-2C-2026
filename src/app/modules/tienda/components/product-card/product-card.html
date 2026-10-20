@@ -1,0 +1,6 @@
+<article>
+  <h4>{{producto()?.nombre}}</h4>
+  <span>{{ producto()?.precio | currency:'ARS':'symbol':'1.2-2'}}</span>
+  <button (click)="verProducto()">Ver producto</button>
+  <button (click)="agregarAlCarrito()" [disabled]="(producto()?.stock ?? 0) > 0">{{(producto()?.stock ?? 0) > 0 ? 'Agregar al carrito' : 'Sin stock'}}</button>
+</article>

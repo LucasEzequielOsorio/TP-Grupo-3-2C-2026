@@ -1,1 +1,3 @@
-<p>productos works!</p>
+@for (producto of productos | async; track producto.id) {
+<app-product-card [producto]="producto" (carritoEvent)="AgregarAlCarrito(producto.id)" (productoEvent)="VerProducto(producto.id)"></app-product-card>
+}

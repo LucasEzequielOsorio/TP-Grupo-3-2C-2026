@@ -3,6 +3,7 @@ import { DatosFormularioUsuario } from '../../modules/usuario/interfaces/datos-f
 import { delay, Observable, of} from 'rxjs';
 import { HttpClient } from '@angular/common/http';
 import { DatosFormularioPerfil } from '../../modules/perfil/interfaces/datos-formulario-perfil';
+import { DatosProducto } from '../../modules/tienda/interfaces/datos-producto';
 
 export interface Usuario
 {
@@ -21,6 +22,7 @@ export interface RespuestaCargaPerfil{
 }
 @Service()
 export class UsuarioService {
+
   cargarPerfil(datos:DatosFormularioPerfil)
   {
     return of({
@@ -29,7 +31,21 @@ export class UsuarioService {
   }
   hasProfile()
   {
-    return this.isLogged();
+    return this.isLogged()? this.getProfile() !== null : false;
+  }
+  getProfile():Observable<DatosFormularioPerfil>
+  {
+    return of({
+      nombre:'Lucas',
+      apellido:'Osorio',
+      fechaNacimiento:'dd/mm/yyyy',
+      direccion:{
+        calle:'Brandsen',
+        altura:805,
+        localidad: 'Buenos Aires',
+        codigoPostal:'C1161AAQ'
+      }
+    });
   }
   isLogged()
   {
@@ -84,7 +100,4 @@ export class UsuarioService {
         switchMap(() => throwError(()=> new Error('rompiste todo amiguito')))
     )*/
   }
-
-
-
 }

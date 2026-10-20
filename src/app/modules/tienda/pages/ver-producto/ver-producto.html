@@ -1,0 +1,7 @@
+@if(this.producto()){
+  <h1>{{ producto()?.nombre }}</h1>
+  <p>{{ producto()?.descripcion }}</p>
+  <p><strong>Precio:</strong> {{ producto()?.precio  | currency:'ARS':'symbol':'1.2-2' }}</p>
+  <p><strong>Stock disponible:</strong> 15 unidades</p>
+}
+
