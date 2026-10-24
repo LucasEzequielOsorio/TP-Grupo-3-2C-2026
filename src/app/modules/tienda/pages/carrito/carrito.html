@@ -1,0 +1,13 @@
+<h1>Mi Carrito</h1>
+@if(carrito().items.length > 0)
+{
+  <form (submit)="this.IniciarCompra($event)">
+    @for(item of carrito().items; track $index){
+<span>{{item.producto.nombre}}</span>
+<label for="">Cantidad: </label><input type="number" [formField]="carritoForm.items[$index].cantidad">
+<span><strong>subtotal: </strong> {{ item.producto.precio * item.cantidad | currency:'ARS':'symbol':'1.2-2' }}</span>
+    }
+    <button type="submit" [disabled]="!carritoForm().valid()">Realizar compra</button>
+  </form>
+}
+

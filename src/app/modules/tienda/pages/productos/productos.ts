@@ -1,14 +1,13 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { DatosProducto } from '../../interfaces/datos-producto';
-import { UsuarioService } from '../../../../api/services/usuario.service';
-import { Observable, async} from 'rxjs';
+import { finalize} from 'rxjs';
 import { AsyncPipe } from '@angular/common';
 import { ProductCard } from '../../components/product-card/product-card';
 import { TiendaService } from '../../../../api/services/tienda.service';
 import { Router } from '@angular/router';
 
 @Component({
-  imports: [AsyncPipe, ProductCard],
+  imports: [ProductCard],
   selector: 'app-productos',
   styleUrl: './productos.css',
   templateUrl: './productos.html',
@@ -16,16 +15,28 @@ import { Router } from '@angular/router';
 export class Productos implements OnInit {
   tiendaService = inject(TiendaService);
   router = inject(Router);
-  productos!:Observable<DatosProducto[]>;
+  productos= signal<DatosProducto[]>([]);
 
   ngOnInit()
   {
-    this.productos = this.tiendaService.getProductos();
+    this.tiendaService.getProductos().subscribe({
+      next: (res:DatosProducto[])=>
+      {
+        this.productos.set(res);
+      }
+    });
   }
 
-  AgregarAlCarrito(id:number)
+  AgregarAlCarrito(id:number, card:ProductCard)
   {
+    this.tiendaService.agregarAlCarrito(id).pipe(finalize(()=>{
+      card.finalizarCarritoEvent()
+    })).subscribe({
+      next: (res)=>
+      {
 
+      }
+    });
   }
   VerProducto(id:number)
   {

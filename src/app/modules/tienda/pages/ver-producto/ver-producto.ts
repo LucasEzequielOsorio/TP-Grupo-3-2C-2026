@@ -1,10 +1,11 @@
-import { Component, numberAttribute, OnInit, input, effect, inject, signal } from '@angular/core';
+import { Component, numberAttribute, OnInit, input, effect, inject, signal, computed } from '@angular/core';
 import { DatosProducto } from '../../interfaces/datos-producto';
 import { TiendaService } from '../../../../api/services/tienda.service';
 import { CurrencyPipe } from '@angular/common';
+import { AgregarAlCarritoButton } from '../../components/agregar-al-carrito-button/agregar-al-carrito-button';
 
 @Component({
-  imports: [CurrencyPipe],
+  imports: [CurrencyPipe, AgregarAlCarritoButton],
   selector: 'app-ver-producto',
   styleUrl: './ver-producto.css',
   templateUrl: './ver-producto.html',
@@ -12,7 +13,8 @@ import { CurrencyPipe } from '@angular/common';
 export class VerProducto{
   tiendaService = inject(TiendaService);
   id = input<number, string | number | undefined>(undefined, { transform: numberAttribute });
-  producto = signal<DatosProducto | null>(null);
+  producto = signal<DatosProducto>({id:-1, nombre: "", descripcion: "", precio: 0, stock: -1});
+  waitingForCarritoEvent = signal<boolean>(false);
   constructor()
   {
     effect(()=>{
@@ -26,6 +28,12 @@ export class VerProducto{
     });
     });
   }
+  disponible = computed(()=>{
+    return this.producto() && this.producto()!.stock > 0;
+  });
 
-
+  agregarAlCarrito()
+  {
+    this.tiendaService.agregarAlCarrito(this.producto().id);
+  }
 }
