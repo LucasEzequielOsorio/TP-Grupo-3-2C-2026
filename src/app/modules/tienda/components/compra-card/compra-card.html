@@ -1,0 +1,14 @@
+<span>Fecha: {{ this.compra()?.fecha}}</span>
+<span>Estado: {{this.compra()?.estado}}</span>
+<span>Items:</span>
+<ul>
+  @for(i of this.compra()?.items; track $index)
+  {
+    <li>
+      <span>{{i.producto.nombre}}</span>
+      <span>{{i.cantidad}}</span>
+      <span>{{(i.producto.precio * i.cantidad) | currency:'ARS':'symbol':'1.2-2'}}</span>
+    </li>
+  }
+</ul>
+

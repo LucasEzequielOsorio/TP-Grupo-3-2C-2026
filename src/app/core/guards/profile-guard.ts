@@ -4,5 +4,5 @@ import { UsuarioService } from '../../api/services/usuario.service';
 
 export const profileGuard: CanActivateFn = (route, state) => {
   const usuarioService = inject(UsuarioService)
-  return true;
+  return usuarioService.hasProfile();
 };

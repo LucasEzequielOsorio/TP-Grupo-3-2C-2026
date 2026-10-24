@@ -1,0 +1,1 @@
+<button (click)="agregarAlCarrito()" [disabled]="((producto()?.stock ?? 0) <= 0) || this.waitingForCarritoEvent()">{{ (producto()?.stock ?? 0) > 0 ? 'Agregar al carrito' : 'Sin stock' }}</button>

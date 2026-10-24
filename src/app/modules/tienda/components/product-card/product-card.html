@@ -1,0 +1,7 @@
+<article>
+  <h4>{{producto()?.nombre}}</h4>
+  <span>{{ producto()?.precio | currency:'ARS':'symbol':'1.2-2'}}</span>
+  <button (click)="verProducto()">Ver producto</button>
+  <app-agregar-al-carrito-button [producto]="producto()" [waitingForCarritoEvent]="this.waitingForCarritoEvent()" (carritoEvent)="this.agregarAlCarrito()"></app-agregar-al-carrito-button>
+  <button (click)="agregarAlCarrito()" [disabled]="((producto()?.stock ?? 0) > 0) || this.waitingForCarritoEvent">{{ (producto()?.stock ?? 0) > 0 ? 'Agregar al carrito' : 'Sin stock' }}</button>
+</article>

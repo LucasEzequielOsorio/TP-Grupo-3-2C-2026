@@ -1,1 +1,3 @@
-<p>productos works!</p>
+@for (producto of productos(); track producto.id) {
+<app-product-card #cardCard [producto]="producto" (carritoEvent)="AgregarAlCarrito(producto.id, cardCard)" (productoEvent)="VerProducto(producto.id)"></app-product-card>
+}
