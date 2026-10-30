@@ -7,6 +7,7 @@ import { CatalogosAdmin } from './pages/catalogos-admin';
 import { pendientesGuard } from './pendientes-guard';
 import { UbicacionesAdmin } from './pages/ubicaciones-admin';
 import { TransferenciasAdmin } from './pages/transferencias-admin';
+import { UbicacionResumen } from './pages/ubicacion-resumen';
 
 export const routes: Routes = [
   {
@@ -21,6 +22,7 @@ export const routes: Routes = [
       { path: 'movimientos', component: InventarioAdmin, data: { modo: 'movimientos' } },
       { path: 'catalogos', component: CatalogosAdmin, canDeactivate: [pendientesGuard] },
       { path: 'ubicaciones', component: UbicacionesAdmin, canDeactivate: [pendientesGuard] },
+      { path: 'ubicaciones/:id', component: UbicacionResumen },
       { path: 'transferencias', component: TransferenciasAdmin, canDeactivate: [pendientesGuard] },
     ],
   },

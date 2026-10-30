@@ -118,6 +118,20 @@ test('Depósitos y transferencias: concurrencia, estados, trazabilidad y rollbac
     const productId = created.body.id;
     assert.equal((await call('/ubicaciones')).body.find((u) => u.id === origin).unidades, 9);
     assert.equal((await call(`/ubicaciones/${origin}/stock`)).body.length, 2);
+    assert.equal((await call(`/ubicaciones/${origin}/resumen`, 'GET', undefined, '')).status, 401);
+    const summary = await call(`/ubicaciones/${origin}/resumen?buscar=${prefix}`);
+    assert.equal(summary.status, 200);
+    assert.equal(summary.body.resumen.unidades, 9);
+    assert.equal(summary.body.resumen.productos_con_stock, 1);
+    assert.equal(summary.body.resumen.variantes_con_stock, 2);
+    assert.equal(summary.body.total, 2);
+    const emptySummary = (
+      await call(`/ubicaciones/${empty}/resumen?buscar=${prefix}&estado=agotado`)
+    ).body;
+    assert.equal(emptySummary.resumen.unidades, 0);
+    assert.equal(emptySummary.total, 2);
+    assert.ok(emptySummary.items.every((v) => v.cantidad === 0));
+    assert.equal((await call(`/ubicaciones/${origin}/resumen?pagina=0`)).status, 400);
     assert.equal(
       (
         await call('/transferencias', 'POST', {
@@ -162,6 +176,12 @@ test('Depósitos y transferencias: concurrencia, estados, trazabilidad y rollbac
     assert.deepEqual(dispatches.map((r) => r.status).sort(), [200, 409]);
     assert.equal(await stock(a, origin), 4);
     assert.equal(await stock(b, origin), 1);
+    const departing = (await call(`/ubicaciones/${origin}/resumen`)).body;
+    const arriving = (await call(`/ubicaciones/${destination}/resumen`)).body;
+    assert.equal(departing.resumen.unidades, 5);
+    assert.equal(departing.resumen.saliendo, 4);
+    assert.equal(arriving.resumen.entrando, 4);
+    assert.equal(arriving.resumen.unidades, 0);
     assert.equal(await stock(a, destination), 0);
     assert.equal((await call(`/transferencias/${main.id}/cancelar`, 'POST', {})).status, 409);
     assert.equal(
@@ -198,6 +218,10 @@ test('Depósitos y transferencias: concurrencia, estados, trazabilidad y rollbac
       { variante_id: b, cantidad: 1 },
     ]);
     const beforeAdjustment = (await call(`/productos/${productId}`)).body;
+    beforeAdjustment.ajuste_stock = {
+      motivo: 'mercaderia_danada',
+      observacion: 'Daño de prueba para verificar el rollback del despacho',
+    };
     beforeAdjustment.variantes
       .find((v) => v.id === b)
       .existencias.find((e) => e.ubicacion_id === origin).cantidad = 0;
@@ -259,6 +283,12 @@ test('Depósitos y transferencias: concurrencia, estados, trazabilidad y rollbac
     assert.equal(await stock(a, empty), 1);
     assert.equal(await stock(a, origin), 0);
     assert.equal(await stock(a, destination), 6);
+    const inactiveSummary = (
+      await call(`/ubicaciones/${destination}/resumen?buscar=${prefix}&estado=inactivos`)
+    ).body;
+    assert.equal(inactiveSummary.resumen.unidades, 7);
+    assert.equal(inactiveSummary.total, 2);
+    assert.ok(inactiveSummary.items.every((i) => !i.producto_activo));
     const list = await call('/transferencias?estado=recibida');
     assert.equal(list.status, 200);
     assert.ok(list.body.items.some((t) => t.id === final.id));

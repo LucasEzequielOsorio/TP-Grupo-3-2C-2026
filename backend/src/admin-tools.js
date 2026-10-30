@@ -114,7 +114,7 @@ toolsRouter.get('/movimientos', async (req, res) => {
   const paginas = Math.max(1, Math.ceil(total / 30));
   const pagina = Math.min(q.pagina, paginas);
   const [items] = await pool.execute(
-    `SELECT m.id, m.creado_en, m.cantidad, m.motivo, m.observacion,
+    `SELECT m.id, m.creado_en, m.cantidad, m.motivo, m.observacion, m.causa_ajuste,
     p.nombre AS producto, p.id AS producto_id, v.sku, t.nombre AS talle, c.nombre AS color,
     u.nombre AS ubicacion, COALESCE(CONCAT(actor.nombre, ' ', actor.apellido), 'Sistema') AS usuario
     ${from} ORDER BY m.id DESC LIMIT 30 OFFSET ${(pagina - 1) * 30}`,

@@ -643,6 +643,27 @@ tbody tr:hover {
   height: 100%;
   object-fit: cover;
 }
+.adjustment-panel {
+  border-color: #d9c69d;
+  background: #fffdf7;
+}
+.stock-changes {
+  list-style: none;
+  padding: 0;
+  margin: 16px 0;
+  max-height: 200px;
+  overflow: auto;
+}
+.stock-changes li {
+  font-size: 11px;
+  border-bottom: 1px solid #eee6d4;
+  padding: 8px 0;
+}
+.stock-changes small {
+  display: block;
+  color: #8c957e;
+  margin-top: 5px;
+}
 .editor-links {
   display: flex;
   gap: 18px;

@@ -15,6 +15,66 @@
   gap: 20px;
   flex-wrap: wrap;
 }
+.back-link {
+  display: inline-block;
+  margin-bottom: 25px;
+  font-size: 12px;
+}
+.location-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.location-stats article {
+  background: #fff;
+  border: 1px solid #dfe6d8;
+  border-radius: 9px;
+  padding: 22px 18px;
+}
+.location-stats strong {
+  display: block;
+  font-size: 29px;
+  font-weight: 600;
+  margin: 13px 0;
+}
+.location-stats small {
+  font-size: 9px;
+  letter-spacing: 0.7px;
+}
+.location-stats article > span {
+  display: block;
+  font-size: 10px;
+  color: #8a977f;
+  line-height: 1.6;
+}
+.stat-arrow {
+  font-size: 18px;
+  color: #8c9d7a;
+}
+.summary-links {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  margin: 0 0 24px;
+}
+@media (max-width: 900px) {
+  .location-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 450px) {
+  .location-stats {
+    gap: 9px;
+  }
+  .location-stats article {
+    padding: 16px 12px;
+  }
+  .location-stats strong {
+    font-size: 24px;
+  }
+}
 .inline-check {
   display: flex;
   align-items: center;

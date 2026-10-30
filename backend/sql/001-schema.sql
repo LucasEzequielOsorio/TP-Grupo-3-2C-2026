@@ -131,6 +131,7 @@ CREATE TABLE movimientos_stock (
   ubicacion_id INT UNSIGNED NOT NULL,
   cantidad INT NOT NULL COMMENT 'Positiva: ingreso. Negativa: egreso.',
   motivo ENUM('inicial', 'ajuste', 'venta', 'devolucion', 'transferencia') NOT NULL,
+  causa_ajuste VARCHAR(30) NULL,
   usuario_id INT UNSIGNED NULL COMMENT 'NULL para inicializacion del sistema',
   transferencia_id INT UNSIGNED NULL,
   pedido_id INT UNSIGNED NULL,

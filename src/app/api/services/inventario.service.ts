@@ -51,6 +51,34 @@ export interface ListaTransferencias {
   pagina: number;
   paginas: number;
 }
+export interface ResumenUbicacion {
+  ubicacion: Ubicacion;
+  resumen: {
+    unidades: number;
+    productos_con_stock: number;
+    variantes_con_stock: number;
+    alertas: number;
+    agotadas: number;
+    entrando: number;
+    saliendo: number;
+  };
+  items: {
+    variante_id: number;
+    producto_id: number;
+    producto: string;
+    clasificacion: string;
+    sku: string;
+    talle: string;
+    color: string;
+    producto_activo: boolean;
+    variante_activa: boolean;
+    cantidad: number;
+    stock_minimo: number;
+  }[];
+  total: number;
+  pagina: number;
+  paginas: number;
+}
 @Service()
 export class InventarioService {
   private http = inject(HttpClient);
@@ -71,6 +99,12 @@ export class InventarioService {
   }
   stock(id: number) {
     return this.http.get<StockUbicacion[]>(`/api/admin/ubicaciones/${id}/stock`, this.options());
+  }
+  resumen(id: number, params: Record<string, string | number>) {
+    return this.http.get<ResumenUbicacion>(`/api/admin/ubicaciones/${id}/resumen`, {
+      ...this.options(),
+      params,
+    });
   }
   transferencias(pagina = 1, estado = '') {
     return this.http.get<ListaTransferencias>('/api/admin/transferencias', {

@@ -253,12 +253,43 @@ test('API: autorización, alta, edición, concurrencia y rollback', async () => 
     update.precio = 24000;
     update.imagenes = [imageUrl2, imageUrl];
     update.variantes[0].existencias[0].cantidad = 8;
+    assert.equal(
+      (await request(`/admin/productos/${id}`, { token, method: 'PUT', body: update })).status,
+      400,
+    );
+    assert.equal(
+      (await request(`/admin/productos/${id}`, { token })).body.stock,
+      5,
+      'Sin motivo no debe modificar existencias ni versión',
+    );
+    for (const motivo of ['otro', 'mercaderia_danada'])
+      assert.equal(
+        (
+          await request(`/admin/productos/${id}`, {
+            token,
+            method: 'PUT',
+            body: { ...update, ajuste_stock: { motivo, observacion: '' } },
+          })
+        ).status,
+        400,
+      );
+    update.ajuste_stock = {
+      motivo: 'ingreso_mercaderia',
+      observacion: 'Ingreso de proveedor de prueba',
+    };
     const saved = await request(`/admin/productos/${id}`, { token, method: 'PUT', body: update });
     assert.equal(saved.status, 200);
     assert.equal(saved.body.stock, 8);
     assert.equal(saved.body.precio, 24000);
     assert.equal(saved.body.imagen_url, imageUrl2);
     assert.deepEqual(saved.body.imagenes, [imageUrl2, imageUrl]);
+    const onlyDetails = await request(`/admin/productos/${id}`, {
+      token,
+      method: 'PUT',
+      body: { ...saved.body, descripcion: 'Descripción actualizada sin tocar stock' },
+    });
+    assert.equal(onlyDetails.status, 200, 'Editar datos sin tocar cantidades no requiere motivo');
+    saved.body = onlyDetails.body;
     const updatedAlerts = (
       await request(`/admin/stock-alertas?ubicacion_id=${catalogs.ubicaciones[0].id}`, { token })
     ).body;
@@ -271,6 +302,16 @@ test('API: autorización, alta, edición, concurrencia y rollback', async () => 
     assert.equal(history.body.total, 1);
     assert.equal(history.body.items[0].cantidad, 3);
     assert.equal(history.body.items[0].usuario, 'Test Temporal');
+    assert.equal(history.body.items[0].causa_ajuste, 'ingreso_mercaderia');
+    assert.equal(history.body.items[0].observacion, 'Ingreso de proveedor de prueba');
+    const invalidDecrease = structuredClone(saved.body);
+    invalidDecrease.variantes[0].existencias[0].cantidad = 7;
+    invalidDecrease.ajuste_stock = { motivo: 'ingreso_mercaderia', observacion: '' };
+    assert.equal(
+      (await request(`/admin/productos/${id}`, { token, method: 'PUT', body: invalidDecrease }))
+        .status,
+      400,
+    );
     assert.equal((await request('/admin/movimientos?pagina=0', { token })).status, 400);
     // Fuerza una segunda página con datos exclusivos de esta prueba.
     for (let index = 0; index < 31; index++)
@@ -303,11 +344,7 @@ test('API: autorización, alta, edición, concurrencia y rollback', async () => 
     );
     assert.deepEqual(
       movements.map((m) => [m.cantidad, m.motivo]),
-      [
-        [5, 'inicial'],
-        [3, 'ajuste'],
-        ...Array.from({ length: 31 }, () => [1, 'ajuste']),
-      ],
+      [[5, 'inicial'], [3, 'ajuste'], ...Array.from({ length: 31 }, () => [1, 'ajuste'])],
     );
     // La duplicación de SKU falla después de insertar el producto: debe revertirlo entero.
     const duplicate = await request('/admin/productos', {
@@ -321,6 +358,10 @@ test('API: autorización, alta, edición, concurrencia y rollback', async () => 
     ]);
     assert.equal(rolledBack.length, 0);
     saved.body.activo = false;
+    saved.body.ajuste_stock = {
+      motivo: 'conteo_fisico',
+      observacion: 'Restablecer el stock temporal tras probar paginación',
+    };
     saved.body.imagenes = [];
     assert.equal(
       (await request(`/admin/productos/${id}`, { token, method: 'PUT', body: saved.body })).status,

@@ -99,6 +99,7 @@ async function validateReferences(db, data) {
 }
 
 export async function saveProduct(id, input, userId) {
+  const isNew = !id;
   const data = productSchema.parse(input);
   const images = input.imagenes === undefined ? undefined : gallerySchema.parse(input.imagenes);
   if (images) data.imagen_url = images[0] || '';
@@ -174,6 +175,25 @@ export async function saveProduct(id, input, userId) {
       for (const e of [...v.existencias].sort((a, b) => a.ubicacion_id - b.ubicacion_id)) {
         const previous = current.find((c) => c.ubicacion_id === e.ubicacion_id);
         const difference = e.cantidad - (previous?.cantidad || 0);
+        if (difference && !isNew) {
+          const adjustment = data.ajuste_stock;
+          if (!adjustment) throw httpError(400, 'Elegí un motivo para modificar las existencias.');
+          if (adjustment.motivo === 'otro' && !adjustment.observacion)
+            throw httpError(400, 'Agregá una observación para el motivo Otro.');
+          if (adjustment.motivo === 'mercaderia_danada' && difference > 0)
+            throw httpError(
+              400,
+              'La mercadería dañada solo permite descontar unidades. Para aumentos usá ingreso o conteo físico.',
+            );
+          if (
+            ['ingreso_mercaderia', 'devolucion_cliente'].includes(adjustment.motivo) &&
+            difference < 0
+          )
+            throw httpError(
+              400,
+              'Los ingresos y devoluciones solo permiten sumar unidades. Para bajas usá daño o conteo físico.',
+            );
+        }
         if (!previous)
           await db.execute(
             'INSERT INTO existencias (variante_id, ubicacion_id, cantidad) VALUES (?, ?, ?)',
@@ -186,14 +206,15 @@ export async function saveProduct(id, input, userId) {
           );
         if (difference)
           await db.execute(
-            'INSERT INTO movimientos_stock (variante_id, ubicacion_id, cantidad, motivo, usuario_id, observacion) VALUES (?, ?, ?, ?, ?, ?)',
+            'INSERT INTO movimientos_stock (variante_id, ubicacion_id, cantidad, motivo, usuario_id, observacion, causa_ajuste) VALUES (?, ?, ?, ?, ?, ?, ?)',
             [
               variantId,
               e.ubicacion_id,
               difference,
-              previous ? 'ajuste' : 'inicial',
+              isNew ? 'inicial' : 'ajuste',
               userId,
-              'Administración de productos',
+              isNew ? 'Existencias iniciales del producto' : data.ajuste_stock.observacion || null,
+              isNew ? 'carga_inicial' : data.ajuste_stock.motivo,
             ],
           );
       }

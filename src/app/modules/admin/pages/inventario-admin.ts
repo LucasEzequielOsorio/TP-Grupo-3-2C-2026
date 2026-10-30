@@ -18,6 +18,20 @@ import { AdminNav } from './admin-nav';
   styleUrl: './tools.css',
 })
 export class InventarioAdmin implements OnInit, OnDestroy {
+  causa(valor: string | null | undefined) {
+    return (
+      (
+        {
+          carga_inicial: 'Carga inicial',
+          conteo_fisico: 'Conteo físico',
+          mercaderia_danada: 'Mercadería dañada',
+          ingreso_mercaderia: 'Ingreso de mercadería',
+          devolucion_cliente: 'Devolución de cliente',
+          otro: 'Otro',
+        } as Record<string, string>
+      )[valor || ''] || ''
+    );
+  }
   private api = inject(AdminProductosService);
   private route = inject(ActivatedRoute);
   private request?: Subscription;
@@ -27,17 +41,15 @@ export class InventarioAdmin implements OnInit, OnDestroy {
   ubicaciones = signal<Opcion[]>([]);
   cargando = signal(false);
   error = signal('');
-  ubicacion = 0;
+  ubicacion = Number(this.route.snapshot.queryParamMap.get('ubicacion_id')) || 0;
   buscar = '';
   motivo = '';
   productoId = this.route.snapshot.queryParamMap.get('producto_id') || '';
   ngOnInit() {
-    this.api
-      .catalogos()
-      .subscribe({
-        next: (c) => this.ubicaciones.set(c.ubicaciones),
-        error: () => this.error.set('No se pudieron cargar las ubicaciones.'),
-      });
+    this.api.catalogos().subscribe({
+      next: (c) => this.ubicaciones.set(c.ubicaciones),
+      error: () => this.error.set('No se pudieron cargar las ubicaciones.'),
+    });
     this.cargar();
   }
   cargar(pagina = 1) {

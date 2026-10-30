@@ -27,6 +27,7 @@ export interface Variante {
   existencias: Existencia[];
 }
 export interface ProductoAdmin {
+  ajuste_stock?: { motivo: string; observacion: string };
   id?: number;
   version?: number;
   nombre: string;
@@ -106,6 +107,7 @@ export interface AlertaStock {
   stock_minimo: number;
 }
 export interface Movimiento {
+  causa_ajuste?: string | null;
   id: number;
   creado_en: string;
   cantidad: number;

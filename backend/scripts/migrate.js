@@ -19,7 +19,12 @@ try {
     .map((s) => s.trim())
     .filter(Boolean))
     await pool.query(statement);
-  console.log('Esquema actualizado: versiones, mínimos de stock y galería.');
+  const [causeColumns] = await pool.execute(
+    "SHOW COLUMNS FROM movimientos_stock LIKE 'causa_ajuste'",
+  );
+  if (!causeColumns.length)
+    await pool.execute('ALTER TABLE movimientos_stock ADD COLUMN causa_ajuste VARCHAR(30) NULL');
+  console.log('Esquema actualizado: versiones, mínimos, galería y motivos de ajustes.');
 } finally {
   await pool.end();
 }

@@ -7,6 +7,7 @@ import { pool } from './db.js';
 import { imageRouter, imagesDirectory } from './images.js';
 import { toolsRouter } from './admin-tools.js';
 import { transfersRouter } from './transfers.js';
+import { summaryRouter } from './location-summary.js';
 
 export const app = express();
 app.disable('x-powered-by');
@@ -31,6 +32,7 @@ app.use(
 app.use('/api/admin', imageRouter);
 app.use('/api/admin', toolsRouter);
 app.use('/api/admin', transfersRouter);
+app.use('/api/admin', summaryRouter);
 app.use('/api/admin', adminRouter);
 app.use((req, res) => res.status(404).json({ mensaje: 'Ruta no encontrada' }));
 app.use((error, req, res, next) => {

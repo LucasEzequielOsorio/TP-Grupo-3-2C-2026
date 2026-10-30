@@ -61,6 +61,18 @@ export const productSchema = z
       .default(''),
     activo: z.boolean(),
     version: id.optional(),
+    ajuste_stock: z
+      .object({
+        motivo: z.enum([
+          'conteo_fisico',
+          'mercaderia_danada',
+          'ingreso_mercaderia',
+          'devolucion_cliente',
+          'otro',
+        ]),
+        observacion: z.string().trim().max(255).default(''),
+      })
+      .optional(),
     variantes: z.array(varianteSchema).min(1).max(100),
   })
   .superRefine((data, ctx) => {

@@ -35,7 +35,8 @@
               @for (u of ubicaciones(); track u.id) {
                 <tr>
                   <td>
-                    <strong>{{ u.nombre }}</strong
+                    <strong
+                      ><a [routerLink]="['/admin/ubicaciones', u.id]">{{ u.nombre }} ↗</a></strong
                     ><small>{{ u.direccion }}</small>
                   </td>
                   <td>{{ u.tipo === 'deposito' ? 'Depósito' : 'Tienda' }}</td>

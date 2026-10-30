@@ -55,6 +55,20 @@ El panel incluye alta y edición, búsqueda, filtro por estado, resumen de exist
 
 ## Depósitos, tiendas y transferencias
 
+### Motivos de ajustes y resumen por ubicación
+
+Ejecutar `npm --prefix backend run db:migrate` antes de iniciar esta versión en una instalación existente. Agrega `movimientos_stock.causa_ajuste` sin reescribir el historial anterior. Las bases nuevas ya incluyen el campo en `001-schema.sql`.
+
+Al modificar cantidades de un producto existente, el cuerpo debe incluir `ajuste_stock: { motivo, observacion }`. Los motivos admitidos son `conteo_fisico`, `mercaderia_danada`, `ingreso_mercaderia`, `devolucion_cliente` y `otro`. La observación tiene hasta 255 caracteres y es obligatoria para `otro`. El motivo aplica a todas las diferencias de esa operación; queda guardado por separado del tipo general `ajuste` y de la observación libre en cada movimiento.
+
+Daño solo permite descontar; ingreso y devolución solo sumar. Conteo físico y Otro permiten corregir en ambos sentidos. Si cambia más de una variante y alguna no respeta el motivo, se revierte toda la transacción. Editar nombre, precio, imagen, mínimos o visibilidad sin cambiar cantidades no requiere motivo ni genera movimientos. Las existencias iniciales de un producto nuevo se registran como `carga_inicial`. Agregar stock a una variante o ubicación de un producto ya existente sí requiere motivo. Los traslados entre ubicaciones deben usar Transferencias.
+
+El formulario muestra el antes/después y solicita el motivo solo cuando hay cambios de cantidad. El historial muestra la causa y la observación; los registros viejos conservan sus textos originales, sin atribuirles causas ficticias.
+
+Desde el nombre de una ubicación se abre `/admin/ubicaciones/:id`: inventario completo, prendas y variantes con stock, unidades físicas, alertas y unidades entrando/saliendo en tránsito. Los totales físicos incluyen productos y variantes inactivos; las alertas solo consideran prendas y variantes activas de una ubicación activa. Las unidades en tránsito se muestran aparte. La tabla incluye el catálogo sin existencias como stock cero y permite buscar por nombre, SKU, talle o color y filtrar con stock, bajo, agotado o inactivo.
+
+API de solo lectura: `GET /api/admin/ubicaciones/:id/resumen?pagina=1&buscar=…&estado=todos`. Admite estados `todos`, `con_stock`, `bajo`, `agotado`, `inactivos`; devuelve ubicación, indicadores y una página de 30 variantes. Los indicadores siempre corresponden al depósito completo, no a la búsqueda. Ubicación, totales y filas se consultan desde una misma instantánea de datos. El enlace de movimientos aplica el filtro de ubicación automáticamente.
+
 Desde `/admin/ubicaciones` un administrador puede crear y editar depósitos o tiendas, indicar su dirección y activarlos/desactivarlos. No se borran ubicaciones históricas. Una ubicación nueva comienza sin existencias; no se inventan unidades al crearla. Aparece automáticamente en el formulario de productos, los filtros y los destinos de transferencias.
 
 No se permite desactivar una ubicación con unidades físicas (incluso de variantes inactivas) ni con transferencias en borrador o en tránsito. Para cerrarla, primero completar o cancelar los traslados pendientes y retirar su stock. Las ubicaciones inactivas se conservan en el historial pero no se ofrecen como origen/destino.

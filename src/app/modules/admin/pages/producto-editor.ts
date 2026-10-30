@@ -30,6 +30,24 @@ export class ProductoEditor implements OnInit, OnDestroy {
   private original = '';
   private cargado = false;
   imagenError = signal('');
+  motivoAjuste = '';
+  observacionAjuste = '';
+  private stockOriginal = new Map<string, number>();
+  cambiosStock() {
+    if (!this.producto.id) return [];
+    return this.producto.variantes
+      .flatMap((v) =>
+        v.existencias
+          .filter((e) => this.ubicacionActiva(e.ubicacion_id))
+          .map((e) => ({
+            variante: v.sku || 'Nueva variante',
+            ubicacion: this.ubicacion(e.ubicacion_id),
+            antes: this.stockOriginal.get(`${v.id}:${e.ubicacion_id}`) || 0,
+            despues: Number(e.cantidad),
+          })),
+      )
+      .filter((e) => e.antes !== e.despues);
+  }
   tieneCambios() {
     return this.cargado && this.snapshot() !== this.original;
   }
@@ -40,9 +58,17 @@ export class ProductoEditor implements OnInit, OnDestroy {
     return JSON.stringify({
       producto: this.producto,
       fotos: this.fotos.map((f) => [f.clave, f.url]),
+      ajuste: this.cambiosStock().length ? [this.motivoAjuste, this.observacionAjuste] : null,
     });
   }
   private aceptarCambios() {
+    this.stockOriginal = new Map(
+      this.producto.variantes.flatMap((v) =>
+        v.existencias.map((e) => [`${v.id}:${e.ubicacion_id}`, e.cantidad] as [string, number]),
+      ),
+    );
+    this.motivoAjuste = '';
+    this.observacionAjuste = '';
     this.original = this.snapshot();
   }
   @HostListener('window:beforeunload', ['$event']) beforeUnload(e: BeforeUnloadEvent) {
@@ -175,6 +201,15 @@ export class ProductoEditor implements OnInit, OnDestroy {
     if (this.guardando()) return;
     this.error.set('');
     this.guardado.set(false);
+    const cambios = this.cambiosStock();
+    if (cambios.length && !this.motivoAjuste) {
+      this.error.set('Elegí el motivo del ajuste de stock antes de guardar.');
+      return;
+    }
+    if (cambios.length && this.motivoAjuste === 'otro' && !this.observacionAjuste.trim()) {
+      this.error.set('Agregá una observación para el motivo Otro.');
+      return;
+    }
     if (!this.producto.variantes.length) {
       this.error.set('Agregá al menos una variante.');
       return;
@@ -188,6 +223,11 @@ export class ProductoEditor implements OnInit, OnDestroy {
     // Ubicaciones inactivas quedan visibles para preservar el historial, sin editarse.
     const payload = {
       ...this.producto,
+      ...(cambios.length
+        ? {
+            ajuste_stock: { motivo: this.motivoAjuste, observacion: this.observacionAjuste.trim() },
+          }
+        : {}),
       variantes: this.producto.variantes.map((v) => ({
         ...v,
         existencias: v.existencias.filter((e) => this.ubicacionActiva(e.ubicacion_id)),

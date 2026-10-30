@@ -215,6 +215,54 @@
               </section>
             </div>
             <aside class="editor-aside">
+              @if (cambiosStock().length) {
+                <section class="panel form-panel adjustment-panel">
+                  <h2>Ajuste de existencias</h2>
+                  <p class="field-help">
+                    Vas a cambiar {{ cambiosStock().length }}
+                    {{ cambiosStock().length === 1 ? 'cantidad' : 'cantidades' }}. El motivo se
+                    registrará en cada movimiento.
+                  </p>
+                  <ul class="stock-changes">
+                    @for (c of cambiosStock(); track $index) {
+                      <li>
+                        <strong>{{ c.variante }}</strong
+                        ><small>{{ c.ubicacion }} · {{ c.antes }} → {{ c.despues }} unidades</small>
+                      </li>
+                    }
+                  </ul>
+                  <label for="motivo-ajuste">Motivo del ajuste *</label
+                  ><select
+                    id="motivo-ajuste"
+                    name="motivo-ajuste"
+                    [(ngModel)]="motivoAjuste"
+                    required
+                  >
+                    <option value="">Seleccioná un motivo</option>
+                    <option value="conteo_fisico">Conteo físico / corrección</option>
+                    <option value="mercaderia_danada">Mercadería dañada</option>
+                    <option value="ingreso_mercaderia">Ingreso de mercadería</option>
+                    <option value="devolucion_cliente">Devolución de cliente</option>
+                    <option value="otro">Otro</option>
+                  </select>
+                  <label for="observacion-ajuste"
+                    >Observación {{ motivoAjuste === 'otro' ? '*' : '(opcional)' }}</label
+                  ><textarea
+                    id="observacion-ajuste"
+                    name="observacion-ajuste"
+                    rows="3"
+                    [(ngModel)]="observacionAjuste"
+                    [required]="motivoAjuste === 'otro'"
+                    maxlength="255"
+                    placeholder="Ej. Recuento de estantería, ingreso de proveedor…"
+                  ></textarea
+                  ><small class="field-help"
+                    >Daño descuenta; ingreso y devolución suman. Para un recuento con altas y bajas,
+                    usá conteo físico. Los traslados entre depósitos se hacen desde
+                    Transferencias.</small
+                  >
+                </section>
+              }
               <section class="panel form-panel">
                 <h2>
                   Fotos del producto <span class="count">{{ fotos.length }} / 8</span>

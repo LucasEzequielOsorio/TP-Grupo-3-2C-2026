@@ -141,8 +141,13 @@
                   {{ m.cantidad > 0 ? '+' : '' }}{{ m.cantidad }}
                 </td>
                 <td>
-                  <span class="badge">{{ m.motivo }}</span
-                  ><small>{{ m.observacion }}</small>
+                  <span class="badge">{{ m.motivo }}</span>
+                  @if (m.causa_ajuste) {
+                    <small
+                      ><strong>{{ causa(m.causa_ajuste) }}</strong></small
+                    >
+                  }
+                  <small>{{ m.observacion }}</small>
                 </td>
                 <td>{{ m.usuario }}</td>
               </tr>
