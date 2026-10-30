@@ -1,7 +1,7 @@
-import { Component, inject, signal, OnInit, OnDestroy } from '@angular/core';
+import { Component, inject, signal, OnInit, OnDestroy, HostListener } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { forkJoin, of, switchMap, tap, Observable } from 'rxjs';
+import { forkJoin, from, of, switchMap, tap, concatMap, toArray } from 'rxjs';
 import {
   AdminProductosService,
   Catalogos,
@@ -26,43 +26,75 @@ export class ProductoEditor implements OnInit, OnDestroy {
   guardando = signal(false);
   error = signal('');
   guardado = signal(false);
-  archivoImagen: File | null = null;
-  vistaPrevia = signal('');
+  fotos: { clave: string; url: string; archivo?: File }[] = [];
+  private original = '';
+  private cargado = false;
   imagenError = signal('');
+  tieneCambios() {
+    return this.cargado && this.snapshot() !== this.original;
+  }
+  enProceso() {
+    return this.guardando();
+  }
+  private snapshot() {
+    return JSON.stringify({
+      producto: this.producto,
+      fotos: this.fotos.map((f) => [f.clave, f.url]),
+    });
+  }
+  private aceptarCambios() {
+    this.original = this.snapshot();
+  }
+  @HostListener('window:beforeunload', ['$event']) beforeUnload(e: BeforeUnloadEvent) {
+    if (this.tieneCambios() || this.enProceso()) {
+      e.preventDefault();
+      e.returnValue = '';
+    }
+  }
   seleccionarImagen(event: Event) {
     const input = event.target as HTMLInputElement;
-    const archivo = input.files?.[0];
-    if (!archivo) return;
+    const archivos = Array.from(input.files || []);
+    if (!archivos.length) return;
     this.imagenError.set('');
     if (
-      !['image/jpeg', 'image/png', 'image/webp'].includes(archivo.type) ||
-      archivo.size > 5 * 1024 * 1024
+      this.fotos.length + archivos.length > 8 ||
+      archivos.some(
+        (archivo) =>
+          !['image/jpeg', 'image/png', 'image/webp'].includes(archivo.type) ||
+          archivo.size > 5 * 1024 * 1024,
+      )
     ) {
-      this.imagenError.set('Elegí una imagen JPG, PNG o WebP de hasta 5 MB.');
+      this.imagenError.set('Podés agregar hasta 8 fotos JPG, PNG o WebP, de hasta 5 MB cada una.');
       input.value = '';
       return;
     }
-    this.liberarVistaPrevia();
-    this.archivoImagen = archivo;
-    this.vistaPrevia.set(URL.createObjectURL(archivo));
+    this.fotos.push(
+      ...archivos.map((archivo) => ({
+        clave: crypto.randomUUID(),
+        url: URL.createObjectURL(archivo),
+        archivo,
+      })),
+    );
     this.guardado.set(false);
     this.creado = false;
     input.value = '';
   }
-  quitarImagen() {
-    this.liberarVistaPrevia();
-    this.archivoImagen = null;
-    this.producto.imagen_url = '';
+  quitarImagen(index: number) {
+    const foto = this.fotos[index];
+    if (foto.archivo) URL.revokeObjectURL(foto.url);
+    this.fotos.splice(index, 1);
     this.imagenError.set('');
     this.guardado.set(false);
     this.creado = false;
   }
-  private liberarVistaPrevia() {
-    if (this.vistaPrevia()) URL.revokeObjectURL(this.vistaPrevia());
-    this.vistaPrevia.set('');
+  hacerPrincipal(index: number) {
+    const [foto] = this.fotos.splice(index, 1);
+    this.fotos.unshift(foto);
+    this.guardado.set(false);
+    this.creado = false;
   }
   ngOnDestroy() {
-    this.liberarVistaPrevia();
+    this.fotos.filter((f) => f.archivo).forEach((f) => URL.revokeObjectURL(f.url));
   }
   producto: ProductoAdmin = {
     nombre: '',
@@ -84,12 +116,18 @@ export class ProductoEditor implements OnInit, OnDestroy {
         if (result.producto) {
           this.producto = result.producto;
           this.producto.imagen_url ||= '';
+          const urls =
+            result.producto.imagenes ??
+            (this.producto.imagen_url ? [this.producto.imagen_url] : []);
+          this.fotos = urls.map((url) => ({ clave: crypto.randomUUID(), url }));
           this.completarExistencias();
         } else {
           this.producto.categoria_id = result.catalogos.categorias[0]?.id || 0;
           this.agregarVariante();
         }
         this.cargando.set(false);
+        this.cargado = true;
+        this.aceptarCambios();
       },
       error: (e) => {
         this.cargando.set(false);
@@ -115,6 +153,7 @@ export class ProductoEditor implements OnInit, OnDestroy {
             color_id: color.id,
             sku: '',
             activo: true,
+            stock_minimo: 3,
             existencias: c.ubicaciones.map((u) => ({ ubicacion_id: u.id, cantidad: 0 })),
           });
           this.guardado.set(false);
@@ -154,30 +193,43 @@ export class ProductoEditor implements OnInit, OnDestroy {
         existencias: v.existencias.filter((e) => this.ubicacionActiva(e.ubicacion_id)),
       })),
     };
-    const subida: Observable<unknown> = this.archivoImagen
-      ? this.api.subirImagen(this.archivoImagen).pipe(
-          tap((res) => {
-            this.producto.imagen_url = res.imagen_url;
-            this.archivoImagen = null;
-            this.liberarVistaPrevia();
-          }),
-        )
-      : of(null);
+    // Sube en serie; en un reintento conserva los archivos ya subidos.
+    const subida = from(this.fotos).pipe(
+      concatMap((foto) =>
+        foto.archivo
+          ? this.api.subirImagen(foto.archivo).pipe(
+              tap((res) => {
+                URL.revokeObjectURL(foto.url);
+                foto.url = res.imagen_url;
+                foto.archivo = undefined;
+              }),
+            )
+          : of(null),
+      ),
+      toArray(),
+    );
     subida
-      .pipe(switchMap(() => this.api.guardar({ ...payload, imagen_url: this.producto.imagen_url })))
+      .pipe(
+        switchMap(() =>
+          this.api.guardar({
+            ...payload,
+            imagen_url: this.fotos[0]?.url || '',
+            imagenes: this.fotos.map((f) => f.url),
+          }),
+        ),
+      )
       .subscribe({
         next: (p) => {
           this.guardando.set(false);
           this.guardado.set(true);
-          if (!this.producto.id)
+          this.producto = p;
+          this.completarExistencias();
+          this.aceptarCambios();
+          if (!payload.id)
             this.router.navigate(['/admin/productos', p.id, 'editar'], {
               replaceUrl: true,
               state: { creado: true },
             });
-          else {
-            this.producto = p;
-            this.completarExistencias();
-          }
         },
         error: (e) => {
           this.guardando.set(false);

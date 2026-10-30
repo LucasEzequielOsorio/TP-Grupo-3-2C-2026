@@ -9,6 +9,13 @@
       <a routerLink="/admin/productos">Productos</a><span>/</span
       >{{ producto.id ? 'Editar producto' : 'Nuevo producto' }}
     </div>
+    @if (producto.id) {
+      <div class="editor-links">
+        <a routerLink="/admin/movimientos" [queryParams]="{ producto_id: producto.id }"
+          >Ver movimientos ↗</a
+        ><a routerLink="/admin/alertas">Revisar stock bajo ↗</a>
+      </div>
+    }
     <header class="page-header">
       <div>
         <span class="eyebrow">ADMINISTRACIÓN DEL CATÁLOGO</span>
@@ -160,6 +167,21 @@
                       </div>
                     </div>
                     <div class="stock-grid">
+                      <div>
+                        <label [for]="'minimo' + i">Mínimo por ubicación</label
+                        ><input
+                          [id]="'minimo' + i"
+                          [name]="'minimo' + i"
+                          type="number"
+                          [(ngModel)]="v.stock_minimo"
+                          min="0"
+                          max="1000000"
+                          step="1"
+                          required
+                        /><small class="field-help"
+                          >Avisar cuando el stock sea igual o menor.</small
+                        >
+                      </div>
                       @for (e of v.existencias; track e.ubicacion_id) {
                         <div>
                           <label [for]="'stock' + i + '-' + e.ubicacion_id">{{
@@ -194,11 +216,13 @@
             </div>
             <aside class="editor-aside">
               <section class="panel form-panel">
-                <h2>Imagen del producto</h2>
+                <h2>
+                  Fotos del producto <span class="count">{{ fotos.length }} / 8</span>
+                </h2>
                 <div class="image-preview">
-                  @if (vistaPrevia() || producto.imagen_url) {
+                  @if (fotos.length) {
                     <img
-                      [src]="vistaPrevia() || producto.imagen_url"
+                      [src]="fotos[0].url"
                       alt="Vista previa del producto"
                       (error)="imagenError.set('No se pudo mostrar la imagen. Elegí otro archivo.')"
                       (load)="imagenError.set('')"
@@ -207,10 +231,33 @@
                     <span>◇<small>Tu prenda, en primer plano</small></span>
                   }
                 </div>
+                <div class="gallery-grid">
+                  @for (foto of fotos; track foto.clave; let index = $index) {
+                    <div class="gallery-item">
+                      <img [src]="foto.url" [alt]="'Foto ' + (index + 1) + ' del producto'" />
+                      @if (index === 0) {
+                        <span class="gallery-main">Principal</span>
+                      } @else {
+                        <button type="button" class="text-button" (click)="hacerPrincipal(index)">
+                          Hacer principal
+                        </button>
+                      }
+                      <button
+                        type="button"
+                        class="gallery-remove"
+                        (click)="quitarImagen(index)"
+                        [attr.aria-label]="'Quitar foto ' + (index + 1)"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  }
+                </div>
                 <input
                   #selectorImagen
                   id="imagen"
                   type="file"
+                  multiple
                   accept="image/jpeg,image/png,image/webp"
                   class="sr-only"
                   (change)="seleccionarImagen($event)"
@@ -222,19 +269,11 @@
                   type="button"
                   (click)="selectorImagen.click()"
                 >
-                  {{ vistaPrevia() || producto.imagen_url ? 'Cambiar imagen' : 'Elegir imagen' }}
+                  Agregar fotos
                 </button>
-                @if (archivoImagen) {
-                  <p class="file-name">{{ archivoImagen.name }}</p>
-                }
-                @if (vistaPrevia() || producto.imagen_url) {
-                  <button type="button" class="text-button remove-image" (click)="quitarImagen()">
-                    Quitar imagen
-                  </button>
-                }
                 <small class="field-help" id="imagen-ayuda"
-                  >Opcional. JPG, PNG o WebP de hasta 5 MB. La imagen se sube al guardar el
-                  producto.</small
+                  >Hasta 8 fotos JPG, PNG o WebP de hasta 5 MB cada una. La primera es la principal.
+                  Se suben al guardar.</small
                 >
                 @if (imagenError()) {
                   <p class="image-error" role="alert">{{ imagenError() }}</p>

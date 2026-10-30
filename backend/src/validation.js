@@ -25,6 +25,7 @@ export const registerSchema = loginSchema.extend({
 });
 const stockSchema = z.object({ ubicacion_id: id, cantidad: z.number().int().min(0).max(1000000) });
 const varianteSchema = z.object({
+  stock_minimo: z.number().int().min(0).max(1000000).default(3),
   id: id.optional(),
   talle_id: id,
   color_id: id,
@@ -84,6 +85,11 @@ export const productSchema = z
         'Hay ubicaciones repetidas',
       );
   });
+// Comparte las reglas de la imagen principal; una foto de galería no puede estar vacía.
+export const gallerySchema = z
+  .array(productSchema.shape.imagen_url.refine((v) => v !== '', 'Imagen vacía'))
+  .max(8)
+  .refine((values) => new Set(values).size === values.length, 'No repitas imágenes');
 export function parseId(value) {
   if (!/^[1-9]\d*$/.test(String(value))) throw httpError(400, 'Identificador inválido');
   return id.parse(Number(value));

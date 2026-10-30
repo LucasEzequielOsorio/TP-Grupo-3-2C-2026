@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { pool, transaction } from './db.js';
 import { authenticate, requireAdmin } from './auth.js';
-import { httpError, parseId, productSchema } from './validation.js';
+import { httpError, parseId, productSchema, gallerySchema } from './validation.js';
 
 export const productsRouter = Router();
 export const adminRouter = Router();
@@ -29,6 +29,10 @@ export async function getProduct(id, admin = false, db = pool) {
     [id],
   );
   if (!rows.length) throw httpError(404, 'Producto no encontrado');
+  const [images] = await db.execute(
+    'SELECT url FROM producto_imagenes WHERE producto_id = ? ORDER BY orden',
+    [id],
+  );
   const [variants] = await db.execute(
     `SELECT v.*, t.nombre AS talle, c.nombre AS color, c.hexadecimal
     FROM variantes_producto v JOIN talles t ON t.id = v.talle_id JOIN colores c ON c.id = v.color_id
@@ -43,6 +47,7 @@ export async function getProduct(id, admin = false, db = pool) {
   );
   return {
     ...normalize(rows[0]),
+    imagenes: images.map((i) => i.url),
     variantes: variants.map((v) => ({
       ...v,
       activo: Boolean(v.activo),
@@ -81,7 +86,9 @@ async function validateReferences(db, data) {
   if (!categories.length) throw httpError(400, 'La categoría no existe');
   const [sizes] = await db.execute('SELECT id FROM talles');
   const [colors] = await db.execute('SELECT id FROM colores');
-  const [locations] = await db.execute('SELECT id FROM ubicaciones WHERE activo = 1');
+  const [locations] = await db.execute(
+    'SELECT id FROM ubicaciones WHERE activo = 1 ORDER BY id FOR SHARE',
+  );
   for (const v of data.variantes) {
     if (!sizes.some((t) => t.id === v.talle_id) || !colors.some((c) => c.id === v.color_id))
       throw httpError(400, 'Talle o color inválido');
@@ -93,6 +100,8 @@ async function validateReferences(db, data) {
 
 export async function saveProduct(id, input, userId) {
   const data = productSchema.parse(input);
+  const images = input.imagenes === undefined ? undefined : gallerySchema.parse(input.imagenes);
+  if (images) data.imagen_url = images[0] || '';
   return transaction(async (db) => {
     if (id) {
       const [rows] = await db.execute('SELECT version FROM productos WHERE id = ? FOR UPDATE', [
@@ -147,15 +156,14 @@ export async function saveProduct(id, input, userId) {
     for (const v of variants) {
       let variantId = v.id;
       if (variantId)
-        await db.execute('UPDATE variantes_producto SET sku=?, activo=? WHERE id=?', [
-          v.sku,
-          v.activo,
-          variantId,
-        ]);
+        await db.execute(
+          'UPDATE variantes_producto SET sku=?, activo=?, stock_minimo=? WHERE id=?',
+          [v.sku, v.activo, v.stock_minimo, variantId],
+        );
       else {
         const [created] = await db.execute(
-          'INSERT INTO variantes_producto (producto_id, talle_id, color_id, sku, activo) VALUES (?, ?, ?, ?, ?)',
-          [id, v.talle_id, v.color_id, v.sku, v.activo],
+          'INSERT INTO variantes_producto (producto_id, talle_id, color_id, sku, activo, stock_minimo) VALUES (?, ?, ?, ?, ?, ?)',
+          [id, v.talle_id, v.color_id, v.sku, v.activo, v.stock_minimo],
         );
         variantId = created.insertId;
       }
@@ -190,6 +198,14 @@ export async function saveProduct(id, input, userId) {
           );
       }
     }
+    const gallery = images ?? (data.imagen_url ? [data.imagen_url] : []);
+    await db.execute('DELETE FROM producto_imagenes WHERE producto_id = ?', [id]);
+    for (const [order, url] of gallery.entries())
+      await db.execute('INSERT INTO producto_imagenes (producto_id, url, orden) VALUES (?, ?, ?)', [
+        id,
+        url,
+        order,
+      ]);
     return getProduct(id, true, db);
   });
 }

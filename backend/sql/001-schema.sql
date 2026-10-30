@@ -48,6 +48,7 @@ CREATE TABLE productos (
 
 CREATE TABLE variantes_producto (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  stock_minimo INT UNSIGNED NOT NULL DEFAULT 3,
   producto_id INT UNSIGNED NOT NULL,
   talle_id INT UNSIGNED NOT NULL,
   color_id INT UNSIGNED NOT NULL,

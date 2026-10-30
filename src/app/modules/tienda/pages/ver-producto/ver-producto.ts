@@ -1,4 +1,13 @@
-import { Component, numberAttribute, OnInit, input, effect, inject, signal, computed } from '@angular/core';
+import {
+  Component,
+  numberAttribute,
+  OnInit,
+  input,
+  effect,
+  inject,
+  signal,
+  computed,
+} from '@angular/core';
 import { DatosProducto } from '../../interfaces/datos-producto';
 import { TiendaService } from '../../../../api/services/tienda.service';
 import { CurrencyPipe } from '@angular/common';
@@ -10,30 +19,29 @@ import { AgregarAlCarritoButton } from '../../components/agregar-al-carrito-butt
   styleUrl: './ver-producto.css',
   templateUrl: './ver-producto.html',
 })
-export class VerProducto{
+export class VerProducto {
   tiendaService = inject(TiendaService);
   id = input<number, string | number | undefined>(undefined, { transform: numberAttribute });
-  producto = signal<DatosProducto>({id:-1, nombre: "", descripcion: "", precio: 0, stock: -1});
+  producto = signal<DatosProducto>({ id: -1, nombre: '', descripcion: '', precio: 0, stock: -1 });
   waitingForCarritoEvent = signal<boolean>(false);
-  constructor()
-  {
-    effect(()=>{
+  imagenSeleccionada = signal('');
+  constructor() {
+    effect(() => {
       const productoId = this.id();
-      if(productoId !== undefined && productoId !== null && !isNaN(productoId))
-      this.tiendaService.getProducto(productoId).subscribe({
-      next: (res:DatosProducto)=>
-      {
-        this.producto.set(res);
-      }
-    });
+      if (productoId !== undefined && productoId !== null && !isNaN(productoId))
+        this.tiendaService.getProducto(productoId).subscribe({
+          next: (res: DatosProducto) => {
+            this.producto.set(res);
+            this.imagenSeleccionada.set(res.imagenes?.[0] || res.imagen_url || '');
+          },
+        });
     });
   }
-  disponible = computed(()=>{
+  disponible = computed(() => {
     return this.producto() && this.producto()!.stock > 0;
   });
 
-  agregarAlCarrito()
-  {
+  agregarAlCarrito() {
     this.tiendaService.agregarAlCarrito(this.producto().id);
   }
 }

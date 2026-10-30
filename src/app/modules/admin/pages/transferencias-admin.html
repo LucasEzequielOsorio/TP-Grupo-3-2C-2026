@@ -1,0 +1,337 @@
+<app-admin-nav />
+<main class="tools-main">
+  <header class="inventory-header">
+    <div>
+      <span class="eyebrow">MOVÉ MERCADERÍA CON TRAZABILIDAD</span>
+      <h1>Transferencias de stock</h1>
+      <p>Origen → En tránsito → Destino. Cada paso queda registrado.</p>
+    </div>
+    <button
+      class="primary"
+      type="button"
+      (click)="nueva()"
+      [disabled]="procesando() || ubicaciones().length < 2"
+    >
+      + Nueva transferencia
+    </button>
+  </header>
+  @if (ubicaciones().length < 2) {
+    <p class="info">
+      Necesitás al menos dos ubicaciones activas.
+      <a routerLink="/admin/ubicaciones">Crear un depósito o tienda ↗</a>
+    </p>
+  }
+  @if (error()) {
+    <p class="alert" role="alert">{{ error() }}</p>
+  }
+  @if (mensaje()) {
+    <p class="success" role="status">{{ mensaje() }}</p>
+  }
+  @if (creando()) {
+    <section class="panel transfer-form">
+      <div class="section-header">
+        <h2>Nueva transferencia</h2>
+        <span>Borrador</span>
+      </div>
+      <form #form="ngForm" (ngSubmit)="guardar()">
+        <fieldset [disabled]="procesando()">
+          <div class="transfer-locations">
+            <div>
+              <label for="origen">Desde *</label
+              ><select
+                id="origen"
+                name="origen"
+                [(ngModel)]="borrador.origen_id"
+                (ngModelChange)="cambiarOrigen()"
+                required
+              >
+                <option [ngValue]="0">Seleccioná el origen</option>
+                @for (u of ubicaciones(); track u.id) {
+                  <option [ngValue]="u.id">{{ u.nombre }}</option>
+                }
+              </select>
+            </div>
+            <span aria-hidden="true">→</span>
+            <div>
+              <label for="destino">Hacia *</label
+              ><select id="destino" name="destino" [(ngModel)]="borrador.destino_id" required>
+                <option [ngValue]="0">Seleccioná el destino</option>
+                @for (u of ubicaciones(); track u.id) {
+                  @if (u.id !== borrador.origen_id) {
+                    <option [ngValue]="u.id">{{ u.nombre }}</option>
+                  }
+                }
+              </select>
+            </div>
+          </div>
+          <p class="info">
+            El borrador no reserva ni descuenta unidades. El stock se comprueba de nuevo al
+            despachar. Cambiar el origen limpia la selección de variantes.
+          </p>
+          @if (borrador.origen_id) {
+            <div class="transfer-search">
+              <label for="buscar-variante">Buscar prendas del origen</label
+              ><input
+                id="buscar-variante"
+                name="buscar-variante"
+                [(ngModel)]="buscar"
+                placeholder="Producto, SKU, talle o color"
+              />
+            </div>
+          }
+          @if (cargandoStock()) {
+            <div class="empty" role="status">Consultando existencias…</div>
+          } @else if (borrador.origen_id) {
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>ELEGIR</th>
+                    <th>PRODUCTO / SKU</th>
+                    <th>VARIANTE</th>
+                    <th>DISPONIBLE</th>
+                    <th>A TRANSFERIR</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (s of disponibles(); track s.variante_id) {
+                    <tr>
+                      <td>
+                        <input
+                          class="row-check"
+                          type="checkbox"
+                          [name]="'seleccion' + s.variante_id"
+                          [ngModel]="!!item(s.variante_id)"
+                          (ngModelChange)="marcar(s.variante_id, $event)"
+                          [attr.aria-label]="'Seleccionar ' + s.sku"
+                        />
+                      </td>
+                      <td>
+                        {{ s.producto }}<small>{{ s.sku }}</small>
+                      </td>
+                      <td>{{ s.color }} / {{ s.talle }}</td>
+                      <td>{{ s.cantidad }}</td>
+                      <td>
+                        <input
+                          class="transfer-quantity"
+                          type="number"
+                          [name]="'cantidad' + s.variante_id"
+                          [ngModel]="item(s.variante_id)?.cantidad || 1"
+                          (ngModelChange)="cantidad(s.variante_id, $event)"
+                          [disabled]="!item(s.variante_id)"
+                          min="1"
+                          [max]="s.cantidad > 1000000 ? 1000000 : s.cantidad"
+                          step="1"
+                          required
+                          [attr.aria-label]="'Cantidad para ' + s.sku"
+                        />
+                      </td>
+                    </tr>
+                  } @empty {
+                    <tr>
+                      <td colspan="5" class="empty">
+                        No hay variantes disponibles para esta búsqueda en el origen.
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+          <footer>
+            <span
+              >{{ borrador.items.length }} variantes · {{ total() }} unidades seleccionadas</span
+            >
+            <div>
+              <button type="button" (click)="cancelarFormulario()">Cancelar</button
+              ><button
+                class="primary"
+                [disabled]="
+                  form.invalid ||
+                  procesando() ||
+                  cargandoStock() ||
+                  !borrador.items.length ||
+                  !borrador.origen_id ||
+                  !borrador.destino_id
+                "
+              >
+                {{ procesando() ? 'Guardando…' : 'Crear borrador' }}
+              </button>
+            </div>
+          </footer>
+        </fieldset>
+      </form>
+    </section>
+  } @else {
+    <section class="panel">
+      <form class="toolbar" (ngSubmit)="cargar()">
+        <div>
+          <label for="estado">Estado</label
+          ><select id="estado" name="estado" [(ngModel)]="estado">
+            <option value="">Todos los estados</option>
+            <option value="borrador">Borrador</option>
+            <option value="en_transito">En tránsito</option>
+            <option value="recibida">Recibida</option>
+            <option value="cancelada">Cancelada</option>
+          </select>
+        </div>
+        <button class="primary" [disabled]="cargando() || procesando()">Aplicar filtro</button>
+      </form>
+      @if (cargando()) {
+        <div class="empty" role="status">Cargando transferencias…</div>
+      } @else {
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>TRANSFERENCIA</th>
+                <th>ORIGEN</th>
+                <th>DESTINO</th>
+                <th>UNIDADES</th>
+                <th>ESTADO</th>
+                <th>ACCIÓN</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (t of lista().items; track t.id) {
+                <tr>
+                  <td>
+                    <strong>#{{ t.id }}</strong
+                    ><small>{{ t.creado_en | date: 'dd/MM/yyyy HH:mm' }}</small>
+                  </td>
+                  <td>{{ t.origen }}</td>
+                  <td>{{ t.destino }}</td>
+                  <td class="quantity">{{ t.unidades }}</td>
+                  <td>
+                    <span
+                      class="badge"
+                      [class.transit]="t.estado === 'en_transito'"
+                      [class.received]="t.estado === 'recibida'"
+                      >{{ etiqueta(t.estado) }}</span
+                    >
+                  </td>
+                  <td>
+                    <button class="link-button" (click)="ver(t.id)" [disabled]="procesando()">
+                      Ver transferencia #{{ t.id }}
+                    </button>
+                  </td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="6" class="empty">Todavía no hay transferencias para este filtro.</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <footer>
+          <span
+            >{{ lista().total }} transferencias · Página {{ lista().pagina }} de
+            {{ lista().paginas }}</span
+          >
+          <div>
+            <button
+              (click)="cargar(lista().pagina - 1)"
+              [disabled]="lista().pagina <= 1 || procesando()"
+            >
+              Anterior</button
+            ><button
+              (click)="cargar(lista().pagina + 1)"
+              [disabled]="lista().pagina >= lista().paginas || procesando()"
+            >
+              Siguiente
+            </button>
+          </div>
+        </footer>
+      }
+    </section>
+  }
+  @if (detalle(); as t) {
+    <section class="panel transfer-detail">
+      <div class="section-header">
+        <h2>Transferencia #{{ t.id }}</h2>
+        <span
+          class="badge"
+          [class.transit]="t.estado === 'en_transito'"
+          [class.received]="t.estado === 'recibida'"
+          >{{ etiqueta(t.estado) }}</span
+        >
+      </div>
+      <div class="transfer-summary">
+        <div>
+          <small>ORIGEN</small><strong>{{ t.origen }}</strong>
+        </div>
+        <span>→</span>
+        <div>
+          <small>DESTINO</small><strong>{{ t.destino }}</strong>
+        </div>
+        <div>
+          <small>CREADA POR</small><strong>{{ t.creado_por_nombre }}</strong>
+        </div>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>PRODUCTO / SKU</th>
+              <th>VARIANTE</th>
+              <th>CANTIDAD</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (i of t.items; track i.variante_id) {
+              <tr>
+                <td>
+                  {{ i.producto }}<small>{{ i.sku }}</small>
+                </td>
+                <td>{{ i.color }} / {{ i.talle }}</td>
+                <td>{{ i.cantidad }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <div class="transfer-dates">
+        <span>Creación: {{ t.creado_en | date: 'dd/MM/yyyy HH:mm' }}</span>
+        @if (t.despachado_en) {
+          <span>Despacho: {{ t.despachado_en | date: 'dd/MM/yyyy HH:mm' }}</span>
+        }
+        @if (t.recibido_en) {
+          <span>Recepción: {{ t.recibido_en | date: 'dd/MM/yyyy HH:mm' }}</span>
+        }
+      </div>
+      @if (t.estado === 'borrador') {
+        <p class="info">
+          Todavía no cambió el stock. Despachá cuando la mercadería salga del origen.
+        </p>
+        <div class="transfer-actions">
+          <button (click)="accion(t, 'cancelar')" [disabled]="procesando()">
+            Cancelar borrador</button
+          ><button class="primary" (click)="accion(t, 'despachar')" [disabled]="procesando()">
+            Despachar {{ t.unidades }} unidades
+          </button>
+        </div>
+      }
+      @if (t.estado === 'en_transito') {
+        <p class="info">
+          La mercadería ya salió del origen y todavía no está disponible en el destino. Confirmá la
+          recepción cuando llegue.
+        </p>
+        <div class="transfer-actions">
+          <button class="primary" (click)="accion(t, 'recibir')" [disabled]="procesando()">
+            Confirmar recepción
+          </button>
+        </div>
+      }
+      @if (t.estado === 'recibida') {
+        <p class="success">
+          Transferencia completada. Las unidades ingresaron al destino. Para devolverlas, creá una
+          nueva transferencia en sentido contrario.
+        </p>
+      }
+      @if (t.estado === 'cancelada') {
+        <p class="info">Borrador cancelado. No se modificaron las existencias.</p>
+      }
+    </section>
+  }
+</main>

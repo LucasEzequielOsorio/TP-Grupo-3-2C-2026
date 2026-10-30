@@ -10,6 +10,7 @@ export const pool = mysql.createPool({
   connectionLimit: 10,
   decimalNumbers: true,
   charset: 'utf8mb4',
+  timezone: 'Z',
 });
 
 export async function transaction(work) {

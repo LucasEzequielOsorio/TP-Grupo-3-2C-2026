@@ -25,7 +25,7 @@ En esta máquina MySQL se publica en **3307**, porque otra base ocupa 3306. La A
 
 El formulario permite elegir JPG, PNG o WebP de hasta 5 MB. La vista previa es local; al guardar se envía el archivo a `POST /api/admin/imagenes` (requiere administrador), usando el tipo de imagen como Content-Type y el archivo como cuerpo binario. El servidor valida y decodifica el contenido, aplica la orientación y lo convierte a WebP de hasta 1600 × 1600 píxeles, sin ampliar imágenes pequeñas ni conservar metadatos. Se rechazan entradas de más de 24 megapíxeles.
 
-Los archivos se guardan en `backend/uploads/` con nombres aleatorios y se sirven mediante `/api/imagenes/<uuid>.webp`. La base conserva esa ruta en `imagen_url`; no hace falta cambiar el esquema. Angular utiliza el mismo proxy `/api` para mostrarlas. La carpeta está excluida de Git: debe conservarse y respaldarse junto con MySQL. Al compartir el proyecto, los archivos subidos no viajan con la rama.
+Los archivos se guardan en `backend/uploads/` con nombres aleatorios y se sirven mediante `/api/imagenes/<uuid>.webp`. La base conserva las fotos en `producto_imagenes`; `productos.imagen_url` refleja la primera como portada para mantener compatibilidad. Angular utiliza el mismo proxy `/api` para mostrarlas. La carpeta está excluida de Git: debe conservarse y respaldarse junto con MySQL. Al compartir el proyecto, los archivos subidos no viajan con la rama.
 
 Cambiar o quitar una imagen actualiza el producto al guardar. No borra archivos antiguos ni subidas cuyo producto no llegó a guardarse; la limpieza de archivos sin referencias queda para una tarea posterior. Se siguen mostrando las URLs externas guardadas anteriormente, pero el formulario ahora usa archivos locales.
 
@@ -51,7 +51,53 @@ Un producto enviado al API incluye `nombre`, `descripcion`, `categoria_id`, `pre
 
 `npm --prefix backend test` prueba el API con la MySQL local: credenciales, permisos 401/403, rol del registro, email único, rechazo de datos inválidos, alta, ajuste con movimientos, rechazo de ediciones obsoletas, rollback ante SKU duplicado y ocultamiento de inactivos. Crea registros TEST-UUID y limpia solo esos registros al terminar. No ejecutar contra una base de producción. `npm run build` verifica Angular.
 
-El panel incluye alta y edición, búsqueda, filtro por estado, resumen de existencias, imagen opcional y cantidades por ubicación. Los catálogos se consultan desde MySQL; su mantenimiento y las pantallas de transferencias quedan para otra etapa. Perfil, carrito y checkout conservan las implementaciones previas del grupo y todavía necesitan integración real. El stock mostrado es físico de ubicaciones activas; no implementa reservas de compra.
+El panel incluye alta y edición, búsqueda, filtro por estado, resumen de existencias y cantidades por ubicación. Perfil, carrito y checkout conservan las implementaciones previas del grupo y todavía necesitan integración real. El stock mostrado es físico de ubicaciones activas; no implementa reservas de compra.
+
+## Depósitos, tiendas y transferencias
+
+Desde `/admin/ubicaciones` un administrador puede crear y editar depósitos o tiendas, indicar su dirección y activarlos/desactivarlos. No se borran ubicaciones históricas. Una ubicación nueva comienza sin existencias; no se inventan unidades al crearla. Aparece automáticamente en el formulario de productos, los filtros y los destinos de transferencias.
+
+No se permite desactivar una ubicación con unidades físicas (incluso de variantes inactivas) ni con transferencias en borrador o en tránsito. Para cerrarla, primero completar o cancelar los traslados pendientes y retirar su stock. Las ubicaciones inactivas se conservan en el historial pero no se ofrecen como origen/destino.
+
+Desde `/admin/transferencias` se eligen origen, destino y variantes con stock disponible. El administrador puede buscar por producto, SKU, talle o color e indicar cantidades enteras positivas. El circuito es:
+
+1. **Crear borrador:** valida los datos y las existencias actuales; no reserva ni modifica stock. No se admite repetir variantes, usar el mismo origen/destino ni enviar un borrador vacío.
+2. **Despachar:** vuelve a verificar todas las existencias, descuenta del origen y registra movimientos negativos. Queda en tránsito y todavía no suma al destino.
+3. **Recibir:** suma al destino (crea la fila de existencias si hace falta), registra los movimientos positivos y marca la transferencia recibida. La recepción se confirma para todos los ítems juntos; no hay recepciones parciales.
+4. **Cancelar:** solo para borradores y sin modificar stock. Una transferencia despachada se debe recibir; si hay que devolverla se crea otra en sentido contrario.
+
+Cada operación usa una transacción y bloquea los recursos en un orden estable. Dos despachos simultáneos no pueden gastar las mismas unidades; confirmar dos veces no duplica descuentos ni ingresos (la segunda petición responde 409). Si falla un ítem, se revierte toda la operación. Despacho y recepción incrementan la versión de cada producto afectado, para rechazar formularios viejos que intentarían sobrescribir el nuevo stock.
+
+Si una prenda se desactiva después del despacho, se permite recibirla para que la mercadería no quede varada. El usuario que confirma cada paso se conserva en sus movimientos. Las unidades en tránsito no se incluyen en el stock físico de la tienda. La tienda sigue sumando todas las ubicaciones activas; las reglas de abastecimiento online y las reservas de pedidos son futuras integraciones.
+
+API (solo administrador):
+
+| Método | Ruta | Función |
+|---|---|---|
+| GET / POST | /api/admin/ubicaciones | Listar / crear ubicaciones |
+| PUT | /api/admin/ubicaciones/:id | Editar nombre, tipo, dirección y estado |
+| GET | /api/admin/ubicaciones/:id/stock | Variantes activas disponibles en el origen |
+| GET / POST | /api/admin/transferencias | Listar con filtro de estado y página / crear borrador |
+| GET | /api/admin/transferencias/:id | Detalle, variantes, fechas y estado |
+| POST | /api/admin/transferencias/:id/despachar | Descontar origen y pasar a tránsito |
+| POST | /api/admin/transferencias/:id/recibir | Sumar destino y completar |
+| POST | /api/admin/transferencias/:id/cancelar | Cancelar un borrador |
+
+Ubicación: `{ nombre, tipo: 'deposito' | 'tienda', direccion, activo }`. Borrador: `{ origen_id, destino_id, items: [{ variante_id, cantidad }] }`. El listado acepta `estado` y `pagina` y devuelve 20 filas por página. Las tablas ya existían; esta funcionalidad no requiere una migración adicional.
+
+`npm --prefix backend test` incluye pruebas de transferencias con datos temporales: estados, saldos, doble confirmación, despachos simultáneos, rollback por falta de stock en un ítem, cambios de versión y restricciones al cerrar depósitos. Limpia exclusivamente sus usuarios, ubicaciones, productos y transferencias de prueba.
+
+## Mejoras de administración
+
+Ejecutar `npm --prefix backend run db:migrate` sobre instalaciones existentes antes de iniciar la nueva API. Es idempotente, agrega `variantes_producto.stock_minimo` (3 por defecto), crea `producto_imagenes` y conserva las fotos anteriores. Las instalaciones nuevas ejecutan los scripts SQL por orden mediante Docker. No se borran datos ni se requiere reiniciar el volumen.
+
+- `/admin/alertas`: variantes activas de productos activos cuyo stock por ubicación activa es menor o igual a su mínimo. Una combinación sin fila de existencias se considera cero. El mínimo se edita en cada variante y se aplica a todas sus ubicaciones; un mínimo cero sigue avisando agotados.
+- `/admin/movimientos`: historial con filtros por producto/SKU, ubicación y motivo, y paginación de 30 registros. Muestra fecha local, unidades con signo y responsable. Los movimientos iniciales sin usuario se atribuyen a Sistema. Desde la edición se puede abrir el historial filtrado por producto. Se consulta el historial, no se permite reescribirlo.
+- `/admin/catalogos`: alta y edición de categorías, talles (incluye orden) y colores (muestra hexadecimal). Se valida unicidad de nombres en MySQL; no se borran registros referenciados. Renombrar actualiza su presentación en el catálogo y el historial.
+- Galería: hasta 8 fotos por producto, selección múltiple, eliminación y elección de portada. El detalle público permite cambiar de foto. El cuerpo de alta/edición puede incluir `imagenes: [url1, url2]`; la primera determina `imagen_url`. Un arreglo vacío quita todas las fotos. Las fotos se guardan dentro de la misma transacción del producto. Se conservan los archivos locales antiguos para evitar romper referencias.
+- Formularios: aviso ante navegación con cambios sin guardar y protección al cerrar o recargar la pestaña. Volver a los valores originales elimina el aviso; guardar correctamente también. Mientras hay un guardado en curso no se abandona el formulario mediante navegación Angular.
+
+API adicional (requiere administrador): `GET /api/admin/stock-alertas?ubicacion_id=…`, `GET /api/admin/movimientos?pagina=1&buscar=…&motivo=ajuste&producto_id=…&ubicacion_id=…`, `POST /api/admin/catalogos/:tipo` y `PUT /api/admin/catalogos/:tipo/:id`. Los tipos admitidos son `categorias`, `talles` y `colores`. Los filtros no especificados se omiten. Los mínimos son enteros no negativos. Los registros de prueba se limpian, incluidas sus galerías y catálogos temporales.
 
 Desde la raíz del repositorio, con Docker Desktop iniciado:
 
@@ -115,4 +161,4 @@ JOIN ubicaciones u ON u.id = e.ubicacion_id
 ORDER BY p.id, v.id;
 ```
 
-Para una instalación MySQL 8.4 sin Docker, crear una base UTF-8 y ejecutar primero `001-schema.sql` y después `002-seed.sql` sobre esa base. No ejecutar el seed sobre datos existentes.
+Para una instalación MySQL 8.4 sin Docker, crear una base UTF-8 y ejecutar `001-schema.sql`, `002-seed.sql` y `003-admin-mejoras.sql` en ese orden sobre esa base. No ejecutar el seed sobre datos existentes.
