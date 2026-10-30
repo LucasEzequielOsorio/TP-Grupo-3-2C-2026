@@ -102,6 +102,15 @@ export const gallerySchema = z
   .array(productSchema.shape.imagen_url.refine((v) => v !== '', 'Imagen vacía'))
   .max(8)
   .refine((values) => new Set(values).size === values.length, 'No repitas imágenes');
+export const photosSchema = z
+  .array(
+    z.object({
+      url: productSchema.shape.imagen_url.refine((v) => v !== '', 'Imagen vacía'),
+      color_id: id.nullable().default(null),
+    }),
+  )
+  .max(8)
+  .refine((fotos) => new Set(fotos.map((f) => f.url)).size === fotos.length, 'No repitas imágenes');
 export function parseId(value) {
   if (!/^[1-9]\d*$/.test(String(value))) throw httpError(400, 'Identificador inválido');
   return id.parse(Number(value));

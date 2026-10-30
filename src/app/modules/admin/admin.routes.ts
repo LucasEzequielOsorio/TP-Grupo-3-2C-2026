@@ -13,6 +13,7 @@ export const routes: Routes = [
   {
     path: '',
     canActivate: [adminGuard],
+    canActivateChild: [adminGuard],
     children: [
       { path: '', redirectTo: 'productos', pathMatch: 'full' },
       { path: 'productos', component: ProductosAdmin },

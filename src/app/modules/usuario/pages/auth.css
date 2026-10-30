@@ -7,6 +7,15 @@
     sans-serif;
   color: #2d4135;
 }
+.browse-link {
+  font-size: 11px;
+  color: #758c62;
+  margin-top: 24px;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  text-align: center;
+  line-height: 1.8;
+}
 * {
   box-sizing: border-box;
 }

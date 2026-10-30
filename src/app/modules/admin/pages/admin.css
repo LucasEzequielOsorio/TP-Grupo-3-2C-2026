@@ -694,6 +694,21 @@ tbody tr:hover {
   display: block;
   margin-bottom: 7px;
 }
+.gallery-item .photo-color-label {
+  font-size: 9px;
+  margin: 8px 5px 5px;
+}
+.gallery-item select {
+  font-size: 10px;
+  padding: 6px 3px;
+  margin-bottom: 8px;
+}
+.gallery-item {
+  padding-top: 22px;
+}
+.gallery-item .gallery-remove {
+  z-index: 1;
+}
 .gallery-main {
   font-size: 10px;
   color: #436d39;

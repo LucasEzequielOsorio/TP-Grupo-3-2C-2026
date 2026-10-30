@@ -8,6 +8,7 @@ import { loginSchema, registerSchema, httpError } from './validation.js';
 
 export const authRouter = Router();
 authRouter.use(
+  ['/login', '/registro'],
   rateLimit({
     windowMs: 15 * 60 * 1000,
     limit: 40,

@@ -26,7 +26,12 @@ export class ProductoEditor implements OnInit, OnDestroy {
   guardando = signal(false);
   error = signal('');
   guardado = signal(false);
-  fotos: { clave: string; url: string; archivo?: File }[] = [];
+  fotos: { clave: string; url: string; color_id: number | null; archivo?: File }[] = [];
+  coloresFoto() {
+    return this.catalogos().colores.filter((c) =>
+      this.producto.variantes.some((v) => v.color_id === c.id),
+    );
+  }
   private original = '';
   private cargado = false;
   imagenError = signal('');
@@ -57,7 +62,7 @@ export class ProductoEditor implements OnInit, OnDestroy {
   private snapshot() {
     return JSON.stringify({
       producto: this.producto,
-      fotos: this.fotos.map((f) => [f.clave, f.url]),
+      fotos: this.fotos.map((f) => [f.clave, f.url, f.color_id]),
       ajuste: this.cambiosStock().length ? [this.motivoAjuste, this.observacionAjuste] : null,
     });
   }
@@ -97,6 +102,7 @@ export class ProductoEditor implements OnInit, OnDestroy {
     this.fotos.push(
       ...archivos.map((archivo) => ({
         clave: crypto.randomUUID(),
+        color_id: null,
         url: URL.createObjectURL(archivo),
         archivo,
       })),
@@ -145,7 +151,9 @@ export class ProductoEditor implements OnInit, OnDestroy {
           const urls =
             result.producto.imagenes ??
             (this.producto.imagen_url ? [this.producto.imagen_url] : []);
-          this.fotos = urls.map((url) => ({ clave: crypto.randomUUID(), url }));
+          this.fotos = (result.producto.fotos ?? urls.map((url) => ({ url, color_id: null }))).map(
+            (f) => ({ clave: crypto.randomUUID(), ...f }),
+          );
           this.completarExistencias();
         } else {
           this.producto.categoria_id = result.catalogos.categorias[0]?.id || 0;
@@ -255,6 +263,7 @@ export class ProductoEditor implements OnInit, OnDestroy {
             ...payload,
             imagen_url: this.fotos[0]?.url || '',
             imagenes: this.fotos.map((f) => f.url),
+            fotos: this.fotos.map((f) => ({ url: f.url, color_id: f.color_id })),
           }),
         ),
       )

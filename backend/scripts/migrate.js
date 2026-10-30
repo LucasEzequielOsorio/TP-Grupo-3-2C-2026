@@ -24,6 +24,11 @@ try {
   );
   if (!causeColumns.length)
     await pool.execute('ALTER TABLE movimientos_stock ADD COLUMN causa_ajuste VARCHAR(30) NULL');
+  const [photoColumns] = await pool.execute("SHOW COLUMNS FROM producto_imagenes LIKE 'color_id'");
+  if (!photoColumns.length)
+    await pool.execute(
+      'ALTER TABLE producto_imagenes ADD COLUMN color_id INT UNSIGNED NULL, ADD CONSTRAINT fk_imagen_color FOREIGN KEY (color_id) REFERENCES colores(id)',
+    );
   console.log('Esquema actualizado: versiones, mínimos, galería y motivos de ajustes.');
 } finally {
   await pool.end();

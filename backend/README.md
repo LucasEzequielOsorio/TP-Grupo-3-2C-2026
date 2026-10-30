@@ -23,6 +23,10 @@ En esta máquina MySQL se publica en **3307**, porque otra base ocupa 3306. La A
 
 ### Imágenes desde la computadora
 
+Cada foto puede asociarse a un color del producto desde el selector **Color de la foto**, o conservarse como **General · todos los colores**. La tienda prioriza las fotos del color elegido y agrega después las generales; nunca usa fotos exclusivas de otro color como reemplazo. Si no hay fotos propias ni generales, muestra la imagen de referencia vacía. El talle no duplica fotografías.
+
+Para instalaciones existentes ejecutar `npm --prefix backend run db:migrate`: agrega `producto_imagenes.color_id` con referencia a `colores`; las imágenes previas conservan `NULL` (generales). La API incorpora `fotos: [{ url, color_id: number | null }]` en el detalle y acepta ese formato en alta/edición. Solo admite colores presentes en las variantes del producto. Mantiene `imagenes` como arreglo de URLs para clientes anteriores; reordenar esas URLs conserva sus asociaciones existentes. Si se envían ambos formatos, `fotos` es el que determina la galería y la portada.
+
 El formulario permite elegir JPG, PNG o WebP de hasta 5 MB. La vista previa es local; al guardar se envía el archivo a `POST /api/admin/imagenes` (requiere administrador), usando el tipo de imagen como Content-Type y el archivo como cuerpo binario. El servidor valida y decodifica el contenido, aplica la orientación y lo convierte a WebP de hasta 1600 × 1600 píxeles, sin ampliar imágenes pequeñas ni conservar metadatos. Se rechazan entradas de más de 24 megapíxeles.
 
 Los archivos se guardan en `backend/uploads/` con nombres aleatorios y se sirven mediante `/api/imagenes/<uuid>.webp`. La base conserva las fotos en `producto_imagenes`; `productos.imagen_url` refleja la primera como portada para mantener compatibilidad. Angular utiliza el mismo proxy `/api` para mostrarlas. La carpeta está excluida de Git: debe conservarse y respaldarse junto con MySQL. Al compartir el proyecto, los archivos subidos no viajan con la rama.

@@ -186,6 +186,10 @@ test('API: autorización, alta, edición, concurrencia y rollback', async () => 
       precio: 19999.9,
       imagen_url: imageUrl,
       imagenes: [imageUrl, imageUrl2],
+      fotos: [
+        { url: imageUrl, color_id: catalogs.colores[0].id },
+        { url: imageUrl2, color_id: catalogs.colores[1].id },
+      ],
       activo: true,
       variantes: [
         {
@@ -195,6 +199,13 @@ test('API: autorización, alta, edición, concurrencia y rollback', async () => 
           activo: true,
           stock_minimo: 5,
           existencias: [{ ubicacion_id: catalogs.ubicaciones[0].id, cantidad: 5 }],
+        },
+        {
+          talle_id: catalogs.talles[0].id,
+          color_id: catalogs.colores[1].id,
+          sku: `${prefix}-B`,
+          activo: true,
+          existencias: [{ ubicacion_id: catalogs.ubicaciones[0].id, cantidad: 0 }],
         },
       ],
     };
@@ -219,6 +230,17 @@ test('API: autorización, alta, edición, concurrencia y rollback', async () => 
     assert.equal(create.body.imagen_url, imageUrl);
     assert.equal(create.body.stock, 5);
     assert.deepEqual(create.body.imagenes, [imageUrl, imageUrl2]);
+    assert.deepEqual(create.body.fotos, product.fotos);
+    assert.equal(
+      (
+        await request('/admin/productos', {
+          token,
+          method: 'POST',
+          body: { ...product, fotos: [{ url: imageUrl, color_id: 4294967295 }] },
+        })
+      ).status,
+      400,
+    );
     assert.deepEqual((await request(`/productos/${create.body.id}`)).body.imagenes, [
       imageUrl,
       imageUrl2,
@@ -252,6 +274,7 @@ test('API: autorización, alta, edición, concurrencia y rollback', async () => 
     const update = structuredClone(create.body);
     update.precio = 24000;
     update.imagenes = [imageUrl2, imageUrl];
+    delete update.fotos; // Un cliente anterior solo envía el arreglo de URLs.
     update.variantes[0].existencias[0].cantidad = 8;
     assert.equal(
       (await request(`/admin/productos/${id}`, { token, method: 'PUT', body: update })).status,
@@ -283,6 +306,11 @@ test('API: autorización, alta, edición, concurrencia y rollback', async () => 
     assert.equal(saved.body.precio, 24000);
     assert.equal(saved.body.imagen_url, imageUrl2);
     assert.deepEqual(saved.body.imagenes, [imageUrl2, imageUrl]);
+    assert.deepEqual(
+      saved.body.fotos,
+      [product.fotos[1], product.fotos[0]],
+      'Reordenar desde un cliente anterior conserva el color',
+    );
     const onlyDetails = await request(`/admin/productos/${id}`, {
       token,
       method: 'PUT',
@@ -363,6 +391,7 @@ test('API: autorización, alta, edición, concurrencia y rollback', async () => 
       observacion: 'Restablecer el stock temporal tras probar paginación',
     };
     saved.body.imagenes = [];
+    saved.body.fotos = [];
     assert.equal(
       (await request(`/admin/productos/${id}`, { token, method: 'PUT', body: saved.body })).status,
       200,

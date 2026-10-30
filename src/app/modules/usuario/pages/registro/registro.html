@@ -20,8 +20,12 @@
         [sent]="waitingForResponse()"
       ></app-formulario-usuario>
       <p class="signup-link">
-        ¿Ya tenés cuenta? <a routerLink="/bienvenido/login">Iniciá sesión</a>
+        ¿Ya tenés cuenta?
+        <a routerLink="/bienvenido/login" [queryParams]="{ returnUrl: retorno }">Iniciá sesión</a>
       </p>
     </div>
+    <a class="browse-link" routerLink="/tienda/productos"
+      >Seguir mirando la tienda sin crear una cuenta →</a
+    >
   </main>
 </div>

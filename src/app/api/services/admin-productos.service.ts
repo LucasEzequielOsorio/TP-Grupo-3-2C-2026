@@ -36,6 +36,7 @@ export interface ProductoAdmin {
   precio: number;
   imagen_url: string;
   imagenes?: string[];
+  fotos?: { url: string; color_id: number | null }[];
   activo: boolean;
   variantes: Variante[];
   clasificacion?: string;

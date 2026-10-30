@@ -1,32 +1,111 @@
-@if (this.producto().id != -1) {
-  @if (imagenSeleccionada()) {
-    <img
-      [src]="imagenSeleccionada()"
-      [alt]="producto().nombre"
-      style="max-width: 100%; width: 360px; height: 400px; object-fit: cover; border-radius: 8px"
-    />
-  }
-  @if ((producto().imagenes?.length || 0) > 1) {
-    <div class="product-gallery" aria-label="Fotos del producto">
-      @for (foto of producto().imagenes; track foto; let index = $index) {
-        <button
-          type="button"
-          (click)="imagenSeleccionada.set(foto)"
-          [attr.aria-pressed]="imagenSeleccionada() === foto"
-          [attr.aria-label]="'Ver foto ' + (index + 1)"
-        >
-          <img [src]="foto" alt="" />
-        </button>
-      }
+<app-tienda-nav />
+<main class="shop-main">
+  <nav class="breadcrumbs" aria-label="Ubicación">
+    <a routerLink="/tienda/productos">Colección</a><span>/</span
+    ><span>{{ producto().id > 0 ? producto().nombre : 'Detalle de la prenda' }}</span>
+  </nav>
+  @if (cargando()) {
+    <div class="shop-empty" role="status">Buscando tu próxima prenda…</div>
+  } @else if (error()) {
+    <div class="shop-empty" role="alert">
+      <h2>Esta prenda no está disponible</h2>
+      <p>{{ error() }}</p>
+      <a class="shop-button dark" routerLink="/tienda/productos">Volver a la colección</a>
     </div>
+  } @else {
+    <section class="detail-grid">
+      <div>
+        <div class="detail-image">
+          @if (imagenSeleccionada() && !imagenError()) {
+            <img
+              [src]="imagenSeleccionada()"
+              [alt]="producto().nombre"
+              (error)="imagenError.set(true)"
+            />
+          } @else {
+            <svg viewBox="0 0 200 220" aria-hidden="true">
+              <path
+                d="m67 25-30 13L5 89l37 22 22-25v111h72V86l22 25 37-22-32-51-30-13c-6 26-60 26-66 0Z"
+                fill="currentColor"
+              />
+            </svg>
+          }
+        </div>
+        @if (fotosVisibles().length > 1) {
+          <div class="gallery" aria-label="Galería de fotos">
+            @for (foto of fotosVisibles(); track foto; let i = $index) {
+              <button
+                type="button"
+                (click)="elegirFoto(foto)"
+                [attr.aria-pressed]="imagenSeleccionada() === foto"
+                [attr.aria-label]="'Ver foto ' + (i + 1)"
+              >
+                <img [src]="foto" alt="" />
+              </button>
+            }
+          </div>
+        }
+      </div>
+      <div class="detail-copy">
+        <span class="eyebrow">{{ producto().clasificacion || 'ESENCIALES' }}</span>
+        <h1>{{ producto().nombre }}</h1>
+        <p class="detail-price">{{ producto().precio | currency: 'ARS' : 'symbol' : '1.0-2' }}</p>
+        <p class="description">{{ producto().descripcion }}</p>
+        @if (colores().length) {
+          <p class="choice-heading">
+            Color <strong>{{ variante()?.color }}</strong>
+          </p>
+          <div class="choices" aria-label="Elegir color">
+            @for (c of colores(); track c.id) {
+              <button
+                type="button"
+                (click)="elegirColor(c.id)"
+                [attr.aria-pressed]="colorSeleccionado() === c.id"
+              >
+                <span [style.background]="c.hexadecimal || '#eeeeee'"></span>{{ c.nombre }}
+              </button>
+            }
+          </div>
+          <p class="choice-heading">Talle</p>
+          <div class="choices" aria-label="Elegir talle">
+            @for (v of talles(); track v.id) {
+              <button
+                type="button"
+                (click)="talleSeleccionado.set(v.talle_id)"
+                [attr.aria-pressed]="talleSeleccionado() === v.talle_id"
+                [attr.aria-label]="
+                  'Talle ' + v.talle + (unidades(v) > 0 ? ' disponible' : ' sin stock')
+                "
+              >
+                {{ v.talle }}
+              </button>
+            }
+          </div>
+          <p class="variant-stock" [class.sold-out]="stockVariante() === 0" role="status">
+            {{
+              stockVariante() > 0
+                ? 'Disponible · ' + stockVariante() + ' unidades'
+                : 'Esta combinación está agotada'
+            }}
+          </p>
+        } @else {
+          <p class="variant-stock" [class.sold-out]="producto().stock <= 0">
+            {{ producto().stock > 0 ? 'Prenda disponible' : 'Sin stock por el momento' }}
+          </p>
+        }
+        <div class="purchase-note">
+          <strong>Compra online próximamente</strong>
+          <p>
+            Por ahora podés explorar la colección, ver los detalles y encontrar tu combinación
+            favorita.
+          </p>
+        </div>
+        <a class="shop-button" routerLink="/tienda/productos">Seguir explorando ←</a>
+      </div>
+    </section>
   }
-  <h1>{{ producto()?.nombre }}</h1>
-  <p>{{ producto()?.descripcion }}</p>
-  <p><strong>Precio:</strong> {{ producto()?.precio | currency: 'ARS' : 'symbol' : '1.2-2' }}</p>
-  <p><strong>Stock disponible:</strong> {{ producto().stock }} unidades</p>
-  <app-agregar-al-carrito-button
-    [producto]="producto()"
-    [waitingForCarritoEvent]="this.waitingForCarritoEvent()"
-    (carritoEvent)="this.agregarAlCarrito()"
-  ></app-agregar-al-carrito-button>
-}
+  <footer class="shop-footer">
+    <a class="footer-brand" routerLink="/tienda/productos">TRAMA.</a
+    ><span>Prendas para todos los días. Estilo para el tuyo.</span>
+  </footer>
+</main>

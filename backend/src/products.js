@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { pool, transaction } from './db.js';
 import { authenticate, requireAdmin } from './auth.js';
-import { httpError, parseId, productSchema, gallerySchema } from './validation.js';
+import { httpError, parseId, productSchema, gallerySchema, photosSchema } from './validation.js';
 
 export const productsRouter = Router();
 export const adminRouter = Router();
@@ -30,7 +30,7 @@ export async function getProduct(id, admin = false, db = pool) {
   );
   if (!rows.length) throw httpError(404, 'Producto no encontrado');
   const [images] = await db.execute(
-    'SELECT url FROM producto_imagenes WHERE producto_id = ? ORDER BY orden',
+    'SELECT url,color_id FROM producto_imagenes WHERE producto_id = ? ORDER BY orden',
     [id],
   );
   const [variants] = await db.execute(
@@ -48,6 +48,7 @@ export async function getProduct(id, admin = false, db = pool) {
   return {
     ...normalize(rows[0]),
     imagenes: images.map((i) => i.url),
+    fotos: images,
     variantes: variants.map((v) => ({
       ...v,
       activo: Boolean(v.activo),
@@ -102,7 +103,18 @@ export async function saveProduct(id, input, userId) {
   const isNew = !id;
   const data = productSchema.parse(input);
   const images = input.imagenes === undefined ? undefined : gallerySchema.parse(input.imagenes);
+  const photos = input.fotos === undefined ? undefined : photosSchema.parse(input.fotos);
+  if (
+    photos?.some(
+      (f) => f.color_id !== null && !data.variantes.some((v) => v.color_id === f.color_id),
+    )
+  )
+    throw httpError(
+      400,
+      'Cada foto debe usar un color de las variantes del producto, o ser general.',
+    );
   if (images) data.imagen_url = images[0] || '';
+  if (photos) data.imagen_url = photos[0]?.url || '';
   return transaction(async (db) => {
     if (id) {
       const [rows] = await db.execute('SELECT version FROM productos WHERE id = ? FOR UPDATE', [
@@ -219,14 +231,30 @@ export async function saveProduct(id, input, userId) {
           );
       }
     }
-    const gallery = images ?? (data.imagen_url ? [data.imagen_url] : []);
+    const [previousPhotos] = await db.execute(
+      'SELECT url,color_id FROM producto_imagenes WHERE producto_id=? ORDER BY orden',
+      [id],
+    );
+    const gallery =
+      photos ??
+      (images === undefined && data.imagen_url === (previousPhotos[0]?.url || '')
+        ? previousPhotos
+        : (images ?? (data.imagen_url ? [data.imagen_url] : [])).map((url) => ({
+            url,
+            color_id: previousPhotos.find((f) => f.url === url)?.color_id ?? null,
+          })));
+    for (const photo of gallery)
+      if (photo.color_id !== null && !data.variantes.some((v) => v.color_id === photo.color_id))
+        throw httpError(
+          400,
+          'Una foto pertenece a un color que el producto ya no tiene. Asignala a otro color o marcala como general.',
+        );
     await db.execute('DELETE FROM producto_imagenes WHERE producto_id = ?', [id]);
-    for (const [order, url] of gallery.entries())
-      await db.execute('INSERT INTO producto_imagenes (producto_id, url, orden) VALUES (?, ?, ?)', [
-        id,
-        url,
-        order,
-      ]);
+    for (const [order, photo] of gallery.entries())
+      await db.execute(
+        'INSERT INTO producto_imagenes (producto_id, url, orden,color_id) VALUES (?, ?, ?, ?)',
+        [id, photo.url, order, photo.color_id],
+      );
     return getProduct(id, true, db);
   });
 }

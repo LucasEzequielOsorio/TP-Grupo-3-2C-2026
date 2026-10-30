@@ -1,8 +1,37 @@
-<article>
-  @if (producto()?.imagen_url) { <img class="product-image" [src]="producto()?.imagen_url" [alt]="producto()?.nombre || 'Prenda'"> }
-  <h4>{{producto()?.nombre}}</h4>
-  <span>{{ producto()?.precio | currency:'ARS':'symbol':'1.2-2'}}</span>
-  <button (click)="verProducto()">Ver producto</button>
-  <app-agregar-al-carrito-button [producto]="producto()" [waitingForCarritoEvent]="this.waitingForCarritoEvent()" (carritoEvent)="this.agregarAlCarrito()"></app-agregar-al-carrito-button>
-  <button (click)="agregarAlCarrito()" [disabled]="((producto()?.stock ?? 0) > 0) || this.waitingForCarritoEvent">{{ (producto()?.stock ?? 0) > 0 ? 'Agregar al carrito' : 'Sin stock' }}</button>
-</article>
+@if (producto(); as p) {
+  <article>
+    <button
+      class="image-button"
+      type="button"
+      (click)="verProducto()"
+      [attr.aria-label]="'Ver ' + p.nombre"
+    >
+      @if (p.imagen_url && !imagenError()) {
+        <img [src]="p.imagen_url" [alt]="p.nombre" (error)="imagenError.set(true)" />
+      } @else {
+        <svg viewBox="0 0 200 220" aria-hidden="true">
+          <path
+            d="m67 25-30 13L5 89l37 22 22-25v111h72V86l22 25 37-22-32-51-30-13c-6 26-60 26-66 0Z"
+            fill="currentColor"
+          />
+        </svg>
+      }
+      <span class="image-label">{{ p.stock > 0 ? 'Ver detalles ↗' : 'Agotado' }}</span>
+    </button>
+    <div class="card-meta">
+      <span>{{ p.clasificacion || 'Esenciales' }}</span
+      ><span [class.sold-out]="p.stock <= 0">{{ p.stock > 0 ? 'Disponible' : 'Sin stock' }}</span>
+    </div>
+    <h3>{{ p.nombre }}</h3>
+    <div class="card-bottom">
+      <strong>{{ p.precio | currency: 'ARS' : 'symbol' : '1.0-2' }}</strong
+      ><button
+        type="button"
+        (click)="verProducto()"
+        [attr.aria-label]="'Elegir talle y color de ' + p.nombre"
+      >
+        Ver prenda <span>↗</span>
+      </button>
+    </div>
+  </article>
+}
