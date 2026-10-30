@@ -1,0 +1,167 @@
+<div class="admin-shell">
+  <aside class="sidebar">
+    <a class="brand" routerLink="/admin/productos"
+      ><span class="brand-icon">T</span> TRAMA<span class="brand-dot">.</span></a
+    >
+    <span class="sidebar-caption">ADMINISTRACIÓN</span>
+    <a class="nav-active" routerLink="/admin/productos"><span>▦</span> Productos</a>
+    <a routerLink="/tienda/productos"><span>↗</span> Ver tienda</a>
+    <div class="sidebar-bottom">
+      <span class="avatar">A</span>
+      <div><strong>Administrador</strong><small>Gestión del catálogo</small></div>
+      <button (click)="salir()" aria-label="Cerrar sesión" title="Cerrar sesión">↪</button>
+    </div>
+  </aside>
+  <main>
+    <div class="topline">
+      <span>Espacio de trabajo <span class="slash">/</span> <strong>Catálogo</strong></span
+      ><span class="workspace-tag">Tienda de ropa</span>
+    </div>
+    <header class="page-header">
+      <div>
+        <span class="eyebrow">TU CATÁLOGO, EN UN SOLO LUGAR</span>
+        <h1>Productos</h1>
+        <p>Organizá tus prendas, variantes y existencias.</p>
+      </div>
+      <a class="button primary" routerLink="/admin/productos/nuevo"
+        ><span>+</span> Nuevo producto</a
+      >
+    </header>
+    <section class="stats" aria-label="Resumen del catálogo">
+      <article>
+        <span>Productos activos</span><strong>{{ activos() }}</strong
+        ><small>Prendas disponibles en la tienda</small>
+      </article>
+      <article>
+        <span>Unidades en stock</span><strong>{{ unidades() }}</strong
+        ><small>Variantes y ubicaciones activas</small>
+      </article>
+      <article>
+        <span>Productos agotados</span><strong>{{ agotados() }}<i class="status-dot"></i></strong
+        ><small>Productos activos sin existencias</small>
+      </article>
+    </section>
+    <section class="panel catalog-panel">
+      <div class="panel-toolbar">
+        <div>
+          <h2>
+            Listado de productos <span class="count">{{ visibles().length }}</span>
+          </h2>
+          <p>Administrá lo que tus clientes van a encontrar.</p>
+        </div>
+        <div class="filters">
+          <label class="search"
+            ><span aria-hidden="true">⌕</span
+            ><input
+              type="search"
+              aria-label="Buscar productos"
+              placeholder="Buscar por nombre o categoría..."
+              [ngModel]="buscando()"
+              (ngModelChange)="buscando.set($event)" /></label
+          ><select
+            aria-label="Filtrar por estado"
+            [ngModel]="filtro()"
+            (ngModelChange)="filtro.set($event)"
+          >
+            <option value="todos">Todos los estados</option>
+            <option value="activos">Activos</option>
+            <option value="inactivos">Inactivos</option>
+          </select>
+        </div>
+      </div>
+      @if (error()) {
+        <div class="alert" role="alert">
+          {{ error() }} <button (click)="cargar()">Reintentar</button>
+        </div>
+      } @else if (cargando()) {
+        <div class="empty" role="status">Cargando catálogo…</div>
+      } @else {
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>PRODUCTO</th>
+                <th>CATEGORÍA</th>
+                <th>PRECIO</th>
+                <th>STOCK</th>
+                <th>ESTADO</th>
+                <th><span class="sr-only">Acciones</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (p of visibles(); track p.id) {
+                <tr>
+                  <td>
+                    <div class="product-cell">
+                      <div
+                        class="product-thumb"
+                        [class.sand]="p.categoria_id === 2"
+                        [class.blue]="p.categoria_id === 3"
+                      >
+                        @if (p.imagen_url) {
+                          <img
+                            [src]="p.imagen_url"
+                            [alt]="p.nombre"
+                            (error)="$any($event.target).style.display = 'none'"
+                          />
+                        } @else {
+                          <svg viewBox="0 0 64 64" aria-hidden="true">
+                            <path
+                              d="M23 10 13 14 4 28l12 7 5-7v27h22V28l5 7 12-7-9-14-10-4c-2 9-16 9-18 0Z"
+                              fill="currentColor"
+                            />
+                          </svg>
+                        }
+                      </div>
+                      <div>
+                        <strong>{{ p.nombre }}</strong
+                        ><small>{{ p.cantidad_variantes }} variantes · #{{ p.id }}</small>
+                      </div>
+                    </div>
+                  </td>
+                  <td>{{ p.clasificacion }}</td>
+                  <td class="price">{{ p.precio | currency: 'ARS' : 'symbol' : '1.0-2' }}</td>
+                  <td>
+                    <span [class.low-stock]="!p.stock">{{ p.stock }} unidades</span>
+                  </td>
+                  <td>
+                    <span class="badge" [class.inactive]="!p.activo">{{
+                      p.activo ? 'Activo' : 'Inactivo'
+                    }}</span>
+                  </td>
+                  <td>
+                    <a
+                      class="edit-link"
+                      [routerLink]="['/admin/productos', p.id, 'editar']"
+                      [attr.aria-label]="'Editar ' + p.nombre"
+                      >Editar <span>↗</span></a
+                    >
+                  </td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="6">
+                    <div class="empty">
+                      No hay productos para mostrar. Probá otra búsqueda o creá tu primera prenda.
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <div class="table-footer">
+          {{ visibles().length }} de {{ productos().length }} productos
+          <span>El stock se administra por talle, color y ubicación.</span>
+        </div>
+      }
+    </section>
+    <div class="hint">
+      <span>◇</span>
+      <p>
+        <strong>Un producto, muchas posibilidades.</strong> Cada combinación de talle y color tiene
+        su propio SKU y stock. Las ubicaciones te permiten crecer a nuevas tiendas.
+      </p>
+    </div>
+  </main>
+</div>

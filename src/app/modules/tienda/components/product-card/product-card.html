@@ -1,4 +1,5 @@
 <article>
+  @if (producto()?.imagen_url) { <img class="product-image" [src]="producto()?.imagen_url" [alt]="producto()?.nombre || 'Prenda'"> }
   <h4>{{producto()?.nombre}}</h4>
   <span>{{ producto()?.precio | currency:'ARS':'symbol':'1.2-2'}}</span>
   <button (click)="verProducto()">Ver producto</button>

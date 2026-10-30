@@ -26,12 +26,16 @@ export class FormularioUsuario {
 
     applyWhen(schemaPath.password, ()=> this.action() === 'registrarse',(passwordPath)=>
     {
-      minLength(passwordPath, 7, {message: 'La contraseña debe tener más de 6 caracteres.'});
+      minLength(passwordPath, 8, {message: 'La contraseña debe tener al menos 8 caracteres.'});
       pattern(passwordPath, /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/, {message: 'La contraseña debe tener al menos una minúscula, una mayúscula y un número.'});
       pattern(passwordPath, /^[a-zA-Z0-9!?_\-@#%.]+$/, {message: 'solo se permiten los siguientes caracteres especiales: !, ?, -, _, @, #, %, .'});
     });
   });
   errorMessage = input<string | null>('');
+  nombre = signal('');
+  apellido = signal('');
+  direccion = signal('');
+  perfilValido = computed(() => this.action() !== 'registrarse' || Boolean(this.nombre().trim() && this.apellido().trim() && this.direccion().trim()));
 
   passwordMatch = computed(()=>{
     return this.repeatPassword().valueOf() === this.formulario.password().value() || this.action() !== 'registrarse';
@@ -41,7 +45,11 @@ export class FormularioUsuario {
   OnSubmit(event:Event)
   {
     event.preventDefault();
-    const credentials = this.formModel();
+    event.stopPropagation();
+    if (!this.formulario().valid() || !this.passwordMatch() || !this.perfilValido() || this.sent()) return;
+    const credentials = this.action() === 'registrarse' ? {
+      ...this.formModel(), nombre: this.nombre().trim(), apellido: this.apellido().trim(), direccion: this.direccion().trim()
+    } : this.formModel();
     this.submit.emit(credentials);
   }
 }

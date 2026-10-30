@@ -21,13 +21,16 @@
   }
   @if(action() == 'registrarse')
   {
+    <label for="nombre">Nombre</label><input id="nombre" required maxlength="100" autocomplete="given-name" [value]="nombre()" (input)="nombre.set($any($event.target).value)">
+    <label for="apellido">Apellido</label><input id="apellido" required maxlength="100" autocomplete="family-name" [value]="apellido()" (input)="apellido.set($any($event.target).value)">
+    <label for="direccion">Dirección</label><input id="direccion" required maxlength="255" autocomplete="street-address" [value]="direccion()" (input)="direccion.set($any($event.target).value)">
     <label for="passwordRepeat">Repetir contraseña</label><input type="password" id="passwordRepeat" [value]="repeatPassword()" (input)="repeatPassword.set($any($event.target).value)">
     @if(!passwordMatch() && formulario.password().touched())
     {
       <span>Las contraseñas no coinciden</span>
     }
   }
-  <button type="submit" [disabled]="this.sent() || !this.formulario().valid() || !passwordMatch()">{{ action() }}</button>
+  <button type="submit" [disabled]="this.sent() || !this.formulario().valid() || !passwordMatch() || !perfilValido()">{{ sent() ? 'Procesando…' : action() }}</button>
   @if(errorMessage() != null)
   {
     <span>{{errorMessage()}}</span>

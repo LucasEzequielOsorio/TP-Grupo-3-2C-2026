@@ -3,12 +3,12 @@ import { FormularioUsuario } from '../../components/formulario-usuario/formulari
 import { DatosFormularioUsuario } from '../../interfaces/datos-formulario-usuario';
 import { RespuestaAuth, UsuarioService } from '../../../../api/services/usuario.service';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 
 @Component({
-  imports: [FormularioUsuario],
+  imports: [FormularioUsuario, RouterLink],
   selector: 'app-registro',
-  styleUrl: './registro.css',
+  styleUrl: '../auth.css',
   templateUrl: './registro.html',
 })
 export class Registro {
@@ -24,12 +24,12 @@ export class Registro {
     this.usuarioService.registrarUsuario(datos).subscribe({
       next: (respuesta:RespuestaAuth)=>
       {
-        this.router.navigate(['login']);
+        this.router.navigate(['/bienvenido/login'], { queryParams: { registrado: '1' } });
         this.waitingForResponse.set(false);
       },
       error: (err)=>
       {
-        this.errorMessage.set(err?.message || 'Ocurrió un error al registrar. Intente nuevamente.');
+        this.errorMessage.set(err?.error?.mensaje || 'Ocurrió un error al registrar. Intente nuevamente.');
         this.waitingForResponse.set(false);
       }
     });

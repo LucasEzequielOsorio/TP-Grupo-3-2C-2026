@@ -4,4 +4,6 @@ export interface DatosProducto {
   descripcion:string,
   precio:number,
   stock:number
+  clasificacion?: string;
+  imagen_url?: string;
 }

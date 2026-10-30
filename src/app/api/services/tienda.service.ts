@@ -1,4 +1,5 @@
-import { Service } from '@angular/core';
+import { Service, inject } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 import { DatosProducto } from '../../modules/tienda/interfaces/datos-producto';
 import { Observable, of } from 'rxjs';
 import { ItemCarrito } from '../../modules/tienda/interfaces/item-carrito';
@@ -15,6 +16,7 @@ export interface RespuestaAgregarAlCarrito
 }
 @Service()
 export class TiendaService {
+  private http = inject(HttpClient);
   getCompras():Observable<DatosCompra[]>
   {
     return of();
@@ -25,25 +27,11 @@ export class TiendaService {
   }
   getProductos():Observable<DatosProducto[]>
     {
-      return of([
-        {
-          id:0,
-          nombre:'producto genial',
-          descripcion:'descripcion genial',
-          precio:2606,
-          stock:1
-        }
-      ]);
+      return this.http.get<DatosProducto[]>('/api/productos');
     }
   getProducto(id:number):Observable<DatosProducto>
   {
-    return of({
-        id:0,
-        nombre:'producto genial',
-        descripcion:'descripcion genial',
-        precio:2606,
-        stock:1
-      });
+    return this.http.get<DatosProducto>(`/api/productos/${id}`);
   }
   agregarAlCarrito(id:number):Observable<RespuestaAgregarAlCarrito>
   {

@@ -1,5 +1,10 @@
 # TPGrupo32C2026
 
+## Base de datos MySQL local
+
+El esquema, los datos de ejemplo y los pasos de instalación están en [backend/README.md](backend/README.md).
+Incluye productos con talles y colores, stock por ubicación y estructura para futuras transferencias.
+
 This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 22.1.6.
 
 ## Development server
