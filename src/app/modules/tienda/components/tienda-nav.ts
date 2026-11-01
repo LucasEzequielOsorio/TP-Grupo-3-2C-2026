@@ -9,10 +9,13 @@ import { UsuarioService } from '../../../api/services/usuario.service';
       <a class="brand" routerLink="/tienda/productos">TRAMA<span>.</span></a
       ><a class="catalog-link" routerLink="/tienda/productos">Colección</a>
       <div class="right">
+        <a routerLink="/tienda/carrito">Mi carrito</a>
         @if (!auth.isLogged()) {
           <a routerLink="/bienvenido/login">Iniciar sesión</a
           ><a class="register" routerLink="/bienvenido/signup">Crear cuenta</a>
         } @else {
+          <a routerLink="/perfil/mi-cuenta">Mi cuenta</a>
+          <a routerLink="/tienda/pedidos">Mis pedidos</a>
           @if (auth.isAdmin()) {
             <a routerLink="/admin/productos">Administración</a>
           } @else {
@@ -86,13 +89,18 @@ import { UsuarioService } from '../../../api/services/usuario.service';
       @media (max-width: 650px) {
         nav {
           padding: 20px;
-          gap: 25px;
+          gap: 16px;
+          flex-wrap: wrap;
+        }
+        .catalog-link {
+          margin-left: auto;
         }
         .right {
-          max-width: 180px;
+          max-width: none;
+          flex-basis: 100%;
           gap: 10px;
           flex-wrap: wrap;
-          justify-content: flex-end;
+          justify-content: space-between;
           text-align: right;
           font-size: 10px;
         }
@@ -104,7 +112,14 @@ export class TiendaNav {
   auth = inject(UsuarioService);
   private router = inject(Router);
   salir() {
+    const token = localStorage.getItem('auth_token');
+    const role = localStorage.getItem('user_role');
     this.auth.logout();
-    this.router.navigate(['/tienda/productos']);
+    this.router.navigate(['/tienda/productos']).then((ok) => {
+      if (!ok && token) {
+        localStorage.setItem('auth_token', token);
+        if (role) localStorage.setItem('user_role', role);
+      }
+    });
   }
 }

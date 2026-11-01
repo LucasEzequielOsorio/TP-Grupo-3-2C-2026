@@ -8,6 +8,8 @@ import { imageRouter, imagesDirectory } from './images.js';
 import { toolsRouter } from './admin-tools.js';
 import { transfersRouter } from './transfers.js';
 import { summaryRouter } from './location-summary.js';
+import { cartRouter } from './cart.js';
+import { ordersRouter } from './orders.js';
 
 export const app = express();
 app.disable('x-powered-by');
@@ -20,6 +22,8 @@ app.get('/api/health', async (req, res) => {
 app.use('/api/auth', authRouter);
 app.get('/api/auth/me', authenticate, (req, res) => res.json({ usuario: req.user }));
 app.use('/api/productos', productsRouter);
+app.use('/api/carrito', cartRouter);
+app.use('/api/pedidos', ordersRouter);
 app.use(
   '/api/imagenes',
   express.static(imagesDirectory, {

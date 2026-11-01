@@ -39,6 +39,8 @@ Cambiar o quitar una imagen actualiza el producto al guardar. No borra archivos 
 | POST | /api/auth/registro | Público, siempre crea cliente |
 | POST | /api/auth/login | Público |
 | GET | /api/auth/me | Sesión válida |
+| GET | /api/auth/cuenta | Datos personales propios, cliente o admin |
+| PUT | /api/auth/cuenta | Edición de la cuenta autenticada |
 | GET | /api/productos | Productos activos |
 | GET | /api/productos/:id | Producto activo y variantes activas |
 | GET | /api/admin/catalogos | Admin |
@@ -55,7 +57,7 @@ Un producto enviado al API incluye `nombre`, `descripcion`, `categoria_id`, `pre
 
 `npm --prefix backend test` prueba el API con la MySQL local: credenciales, permisos 401/403, rol del registro, email único, rechazo de datos inválidos, alta, ajuste con movimientos, rechazo de ediciones obsoletas, rollback ante SKU duplicado y ocultamiento de inactivos. Crea registros TEST-UUID y limpia solo esos registros al terminar. No ejecutar contra una base de producción. `npm run build` verifica Angular.
 
-El panel incluye alta y edición, búsqueda, filtro por estado, resumen de existencias y cantidades por ubicación. Perfil, carrito y checkout conservan las implementaciones previas del grupo y todavía necesitan integración real. El stock mostrado es físico de ubicaciones activas; no implementa reservas de compra.
+El panel incluye alta y edición, búsqueda, filtro por estado, resumen de existencias y cantidades por ubicación. El carrito, la confirmación de pedidos y Mi cuenta están integrados con MySQL. Los pagos online siguen pendientes. El stock mostrado es físico de ubicaciones activas; no implementa reservas de compra.
 
 ## Depósitos, tiendas y transferencias
 
@@ -151,7 +153,7 @@ Si cambiaron el usuario o la base, ajustar esos argumentos. Para detener conserv
 
 Se incluyen usuarios y pedidos para integrar el trabajo del equipo. El email es único sin distinguir mayúsculas y la contraseña se guarda como hash generado por el backend. No se crea una cuenta administradora de ejemplo. El alta pública deberá asignar siempre el rol cliente, sin aceptar un rol enviado por el navegador.
 
-Los pedidos conservan precio unitario y dirección de entrega. El carrito y la autenticación todavía no están implementados por estos scripts.
+Los pedidos confirmados conservan precio unitario, dirección de entrega y una copia del nombre, talle y color. La autenticación, el carrito y la confirmación están implementados en la API.
 
 ## Reglas que deberá implementar el backend
 
@@ -179,4 +181,44 @@ JOIN ubicaciones u ON u.id = e.ubicacion_id
 ORDER BY p.id, v.id;
 ```
 
-Para una instalación MySQL 8.4 sin Docker, crear una base UTF-8 y ejecutar `001-schema.sql`, `002-seed.sql` y `003-admin-mejoras.sql` en ese orden sobre esa base. No ejecutar el seed sobre datos existentes.
+Para una instalación MySQL 8.4 sin Docker, crear una base UTF-8 y ejecutar `001-schema.sql`, `002-seed.sql`, `003-admin-mejoras.sql`, `004-carrito.sql` y `005-pedidos.sql` en ese orden sobre esa base. No ejecutar el seed sobre datos existentes.
+
+## Carrito y detalle del pedido
+
+En bases existentes ejecutar `node backend/scripts/migrate.js` desde la raíz. La migración agrega `carrito_items` sin borrar datos.
+
+- `GET /api/carrito`: items y total calculados con precios actuales, fotos por color y disponibilidad de ubicaciones activas.
+- `POST /api/carrito/items/:varianteId` con `{ "cantidad": 2 }`: acumula unidades de esa variante.
+- `PUT /api/carrito/items/:varianteId` con `{ "cantidad": 1 }`: reemplaza la cantidad.
+- `DELETE /api/carrito/items/:varianteId`: elimina esa combinación.
+
+Todas las rutas requieren Bearer token y obtienen el usuario de la sesión. Cantidad entera entre 1 y 999, sin superar disponibilidad. Los cambios del mismo carrito se serializan bajo bloqueo de usuario. Agregar al carrito no reserva ni descuenta stock; precios y disponibilidad se actualizan al consultarlo. Las prendas desactivadas permanecen visibles en el carrito como no disponibles para poder eliminarlas.
+
+Pruebas: `node --test backend/test/cart.test.js` (MySQL local iniciado y migraciones aplicadas).
+
+## Confirmación e historial de pedidos
+
+Ejecutar `node backend/scripts/migrate.js` desde la raíz para agregar las tablas auxiliares de `005-pedidos.sql` en bases existentes.
+
+- `GET /api/pedidos/entrega`: dirección de la cuenta autenticada para revisión previa.
+- `POST /api/pedidos`: `{ clave: UUID, items: [{ variante_id, cantidad, precio }] }`. El precio enviado solo comprueba que el usuario revisó el valor actual; se cobra el precio obtenido de productos. Máximo 100 combinaciones.
+- `GET /api/pedidos`: últimos 100 pedidos propios, del más reciente al más antiguo.
+- `GET /api/pedidos/:id`: detalle propio con precios y datos históricos; un pedido ajeno responde 404.
+
+La confirmación bloquea usuario, productos, variantes, ubicaciones y existencias en orden estable. Valida carrito, precios, estado activo y stock; guarda pedido e ítems, descuenta existencias, registra movimientos de venta, incrementa versiones de productos y vacía el carrito dentro de una transacción. Si cambia un precio o falta stock, responde 409 sin confirmar parcialmente. Reintentar la misma clave devuelve el mismo pedido, incluso si se perdió la primera respuesta.
+
+Abastecimiento básico: descuenta de las ubicaciones activas en orden de id y puede repartir una prenda entre varias ubicaciones. Las unidades en tránsito no se venden. La dirección es la registrada en la cuenta al confirmar. No se implementan cobros online, cancelación ni gestión de envíos.
+
+Pruebas: `node --test backend/test/orders.test.js`, con datos temporales propios y limpieza al finalizar.
+
+## Mi cuenta
+
+Disponible para clientes y administradores en /perfil/mi-cuenta. GET /api/auth/cuenta devuelve nombre, apellido, email, dirección y rol; nunca hashes ni contraseñas. PUT /api/auth/cuenta acepta email, nombre, apellido, direccion y, opcionalmente, password_actual y password_nueva. No acepta cambiar id, rol ni estado activo.
+
+Cambiar email o contraseña requiere verificar password_actual. El email permanece único; la nueva contraseña usa las mismas reglas del registro y bcrypt. Los cambios se realizan juntos en una transacción: si el email está ocupado o falla la validación, no se modifica ningún dato. Se limita la cantidad de intentos de edición.
+
+Ejecutar node backend/scripts/migrate.js en bases existentes para agregar usuarios.auth_version. Al cambiar email o contraseña se incrementa esta versión, se emite un nuevo token para la sesión actual y los tokens anteriores dejan de ser válidos. La API verifica la versión contra MySQL en cada solicitud autenticada. Editar nombre o dirección no invalida otras sesiones.
+
+Las modificaciones de dirección se aplican a los pedidos futuros. Los pedidos confirmados conservan su dirección y datos históricos. La pantalla avisa antes de descartar cambios y permite mostrar u ocultar cada campo de contraseña.
+
+Pruebas: node --test backend/test/account.test.js (cuentas temporales de ambos roles).

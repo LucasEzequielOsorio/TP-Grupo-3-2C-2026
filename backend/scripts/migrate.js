@@ -2,6 +2,11 @@ import { pool } from '../src/db.js';
 import { readFile } from 'node:fs/promises';
 
 try {
+  const [authColumns] = await pool.execute("SHOW COLUMNS FROM usuarios LIKE 'auth_version'");
+  if (!authColumns.length)
+    await pool.execute(
+      'ALTER TABLE usuarios ADD COLUMN auth_version INT UNSIGNED NOT NULL DEFAULT 0',
+    );
   // Migración incremental compatible con la base creada en el paso anterior.
   const [columns] = await pool.execute("SHOW COLUMNS FROM productos LIKE 'version'");
   if (!columns.length)
@@ -29,7 +34,15 @@ try {
     await pool.execute(
       'ALTER TABLE producto_imagenes ADD COLUMN color_id INT UNSIGNED NULL, ADD CONSTRAINT fk_imagen_color FOREIGN KEY (color_id) REFERENCES colores(id)',
     );
-  console.log('Esquema actualizado: versiones, mínimos, galería y motivos de ajustes.');
+  const cartSql = await readFile(new URL('../sql/004-carrito.sql', import.meta.url), 'utf8');
+  await pool.query(cartSql);
+  const ordersSql = await readFile(new URL('../sql/005-pedidos.sql', import.meta.url), 'utf8');
+  for (const statement of ordersSql
+    .split(';')
+    .map((s) => s.trim())
+    .filter(Boolean))
+    await pool.query(statement);
+  console.log('Esquema actualizado: administración y carrito por usuario.');
 } finally {
   await pool.end();
 }

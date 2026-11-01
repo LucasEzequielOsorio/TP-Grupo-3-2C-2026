@@ -1,57 +1,98 @@
 import { Service, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { DatosProducto } from '../../modules/tienda/interfaces/datos-producto';
-import { Observable, of } from 'rxjs';
-import { ItemCarrito } from '../../modules/tienda/interfaces/item-carrito';
+import { of } from 'rxjs';
 import { DatosCompra } from '../../modules/tienda/interfaces/datos-compra';
 
-export interface RespuestaCrearPreferencia
-{
-  id:string,
-  init_point:string
+export interface LineaCarrito {
+  variante_id: number;
+  producto_id: number;
+  nombre: string;
+  talle: string;
+  color: string;
+  imagen_url: string;
+  precio: number;
+  cantidad: number;
+  stock: number;
+  activo: boolean;
+  subtotal: number;
 }
-export interface RespuestaAgregarAlCarrito
-{
-  exito:boolean
+export interface PedidoResumen {
+  id: number;
+  estado: string;
+  creado_en: string;
+  total: number;
+  unidades: number;
+}
+export interface PedidoDetalle extends PedidoResumen {
+  direccion_entrega: string;
+  items: {
+    id: number;
+    nombre: string;
+    talle: string;
+    color: string;
+    cantidad: number;
+    precio_unitario: number;
+    subtotal: number;
+  }[];
+}
+export interface CarritoRespuesta {
+  items: LineaCarrito[];
+  total: number;
+  unidades: number;
 }
 @Service()
 export class TiendaService {
-  private http = inject(HttpClient);
-  getCompras():Observable<DatosCompra[]>
-  {
-    return of();
+  getPedidos() {
+    return this.http.get<PedidoResumen[]>('/api/pedidos', this.options);
   }
-  crearPreferencia(items:ItemCarrito[]):Observable<RespuestaCrearPreferencia>
-  {
-    return of();
+  getPedido(id: number) {
+    return this.http.get<PedidoDetalle>('/api/pedidos/' + id, this.options);
   }
-  getProductos():Observable<DatosProducto[]>
-    {
-      return this.http.get<DatosProducto[]>('/api/productos');
-    }
-  getProducto(id:number):Observable<DatosProducto>
-  {
-    return this.http.get<DatosProducto>(`/api/productos/${id}`);
+  getEntrega() {
+    return this.http.get<{ direccion: string }>('/api/pedidos/entrega', this.options);
   }
-  agregarAlCarrito(id:number):Observable<RespuestaAgregarAlCarrito>
-  {
-    return of({
-        exito:true
-      });
-  }
-  getCarrito():Observable<ItemCarrito[]>
-  {
-    return of([
+  confirmarPedido(clave: string, items: LineaCarrito[]) {
+    return this.http.post<PedidoDetalle>(
+      '/api/pedidos',
       {
-        producto: {
-        id:0,
-        nombre:'producto genial',
-        descripcion:'descripcion genial',
-        precio:2606,
-        stock:15
-        },
-        cantidad: 3
-      }
-    ]);
+        clave,
+        items: items.map((i) => ({
+          variante_id: i.variante_id,
+          cantidad: i.cantidad,
+          precio: i.precio,
+        })),
+      },
+      this.options,
+    );
+  }
+  private http = inject(HttpClient);
+  private get options() {
+    return { headers: { Authorization: 'Bearer ' + (localStorage.getItem('auth_token') || '') } };
+  }
+  getCompras() {
+    return of<DatosCompra[]>([]);
+  }
+  getProductos() {
+    return this.http.get<DatosProducto[]>('/api/productos');
+  }
+  getProducto(id: number) {
+    return this.http.get<DatosProducto>('/api/productos/' + id);
+  }
+  agregarAlCarrito(varianteId: number, cantidad: number) {
+    return this.http.post<CarritoRespuesta>(
+      '/api/carrito/items/' + varianteId,
+      { cantidad },
+      this.options,
+    );
+  }
+  getCarrito() {
+    return this.http.get<CarritoRespuesta>('/api/carrito', this.options);
+  }
+  actualizarCantidad(id: number, cantidad: number) {
+    return this.http.put<CarritoRespuesta>('/api/carrito/items/' + id, { cantidad }, this.options);
+  }
+  eliminarDelCarrito(id: number) {
+    return this.http.delete<CarritoRespuesta>('/api/carrito/items/' + id, this.options);
   }
 }

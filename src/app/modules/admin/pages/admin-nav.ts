@@ -14,6 +14,7 @@ import { UsuarioService } from '../../../api/services/usuario.service';
       ><a routerLink="/admin/catalogos" routerLinkActive="selected">Catálogos</a>
       <a routerLink="/admin/ubicaciones" routerLinkActive="selected">Depósitos</a>
       <a routerLink="/admin/transferencias" routerLinkActive="selected">Transferencias</a>
+      <a routerLink="/perfil/mi-cuenta">Mi cuenta</a>
     </div>
     <button type="button" (click)="salir()">Cerrar sesión</button>
   </nav>`,

@@ -15,12 +15,42 @@ export interface RespuestaAuth {
   usuario: Usuario;
   mensaje?: string;
 }
+export interface CuentaUsuario extends Usuario {
+  nombre: string;
+  apellido: string;
+  direccion: string;
+}
+export interface ActualizacionCuenta {
+  email: string;
+  nombre: string;
+  apellido: string;
+  direccion: string;
+  password_actual?: string;
+  password_nueva?: string;
+}
 export interface RespuestaCargaPerfil {
   exito: boolean;
   mensaje?: string;
 }
 @Service()
 export class UsuarioService {
+  getCuenta() {
+    return this.http.get<{ usuario: CuentaUsuario }>('/api/auth/cuenta', {
+      headers: { Authorization: 'Bearer ' + (localStorage.getItem('auth_token') || '') },
+    });
+  }
+  actualizarCuenta(datos: ActualizacionCuenta) {
+    return this.http
+      .put<RespuestaAuth & { usuario: CuentaUsuario }>('/api/auth/cuenta', datos, {
+        headers: { Authorization: 'Bearer ' + (localStorage.getItem('auth_token') || '') },
+      })
+      .pipe(
+        tap((res) => {
+          localStorage.setItem('auth_token', res.token);
+          localStorage.setItem('user_role', res.usuario.rol);
+        }),
+      );
+  }
   cargarPerfil(datos: DatosFormularioPerfil) {
     return of({
       exito: true,

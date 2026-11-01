@@ -94,11 +94,33 @@
           </p>
         }
         <div class="purchase-note">
-          <strong>Compra online próximamente</strong>
-          <p>
-            Por ahora podés explorar la colección, ver los detalles y encontrar tu combinación
-            favorita.
-          </p>
+          <label for="cantidad">Cantidad</label>
+          <input
+            id="cantidad"
+            type="number"
+            min="1"
+            [max]="stockVariante()"
+            [ngModel]="cantidad()"
+            (ngModelChange)="cantidad.set(+$event)"
+            [disabled]="waitingForCarritoEvent()"
+          />
+          <p>El stock se confirma al agregar. El carrito no reserva prendas.</p>
+          <button
+            type="button"
+            class="shop-button dark"
+            (click)="agregarAlCarrito()"
+            [disabled]="stockVariante() <= 0 || waitingForCarritoEvent()"
+          >
+            {{ waitingForCarritoEvent() ? 'Agregando…' : 'Agregar al carrito' }}
+          </button>
+          @if (mensajeCarrito()) {
+            <p role="status">
+              {{ mensajeCarrito() }} <a routerLink="/tienda/carrito">Ver mi pedido →</a>
+            </p>
+          }
+          @if (errorCarrito()) {
+            <p role="alert">{{ errorCarrito() }}</p>
+          }
         </div>
         <a class="shop-button" routerLink="/tienda/productos">Seguir explorando ←</a>
       </div>

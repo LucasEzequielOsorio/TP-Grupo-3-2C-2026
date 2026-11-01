@@ -1,0 +1,73 @@
+<app-tienda-nav />
+<main class="shop-main">
+  <nav class="breadcrumbs" aria-label="Ubicación">
+    <a routerLink="/tienda/productos">Colección</a><span>/</span
+    ><a routerLink="/tienda/pedidos">Mis pedidos</a>
+  </nav>
+  <span class="eyebrow">TU CUENTA</span>
+  @if (cargando()) {
+    <div class="shop-empty" role="status">Cargando tus pedidos…</div>
+  } @else if (error()) {
+    <div class="shop-empty" role="alert">
+      {{ error() }} <a routerLink="/tienda/pedidos">Volver a mis pedidos</a>
+    </div>
+  } @else if (detalle(); as pedido) {
+    <h1>Pedido #{{ pedido.id }}</h1>
+    <p role="status">
+      Estado: {{ pedido.estado }} · {{ pedido.creado_en | date: 'dd/MM/yyyy HH:mm' }}
+    </p>
+    <div class="cart-layout">
+      <section aria-label="Prendas del pedido">
+        @for (item of pedido.items; track item.id) {
+          <article class="cart-item">
+            <div class="cart-description">
+              <h2>{{ item.nombre }}</h2>
+              <p>Talle {{ item.talle }} · {{ item.color }}</p>
+              <p>
+                {{ item.cantidad }} ×
+                {{ item.precio_unitario | currency: 'ARS' : 'symbol' : '1.2-2' }}
+              </p>
+            </div>
+            <strong>{{ item.subtotal | currency: 'ARS' : 'symbol' : '1.2-2' }}</strong>
+          </article>
+        }
+      </section>
+      <aside class="cart-summary">
+        <span class="eyebrow">PEDIDO GUARDADO</span>
+        <h2>Resumen</h2>
+        <p>
+          Dirección de entrega: <strong>{{ pedido.direccion_entrega }}</strong>
+        </p>
+        <div class="cart-total">
+          <span>Total</span
+          ><strong>{{ pedido.total | currency: 'ARS' : 'symbol' : '1.2-2' }}</strong>
+        </div>
+        <p>Los precios corresponden al momento de confirmar. No se realizó un cobro online.</p>
+        <a class="shop-button dark" routerLink="/tienda/pedidos">Ver mis pedidos</a>
+        <a class="shop-button" routerLink="/tienda/productos">Seguir comprando →</a>
+      </aside>
+    </div>
+  } @else {
+    <h1>Mis pedidos</h1>
+    <p>Consultá tus últimos 100 pedidos y el detalle de cada selección.</p>
+    @for (pedido of pedidos(); track pedido.id) {
+      <article class="cart-item">
+        <div class="cart-description">
+          <h2>Pedido #{{ pedido.id }}</h2>
+          <p>
+            {{ pedido.creado_en | date: 'dd/MM/yyyy HH:mm' }} · {{ pedido.estado }} ·
+            {{ pedido.unidades }} unidades
+          </p>
+          <a [routerLink]="['/tienda/pedidos', pedido.id]">Ver detalle →</a>
+        </div>
+        <strong>{{ pedido.total | currency: 'ARS' : 'symbol' : '1.2-2' }}</strong>
+      </article>
+    } @empty {
+      <div class="shop-empty">
+        <h2>Todavía no tenés pedidos</h2>
+        <p>Cuando confirmes tu carrito, aparecerá acá.</p>
+        <a class="shop-button dark" routerLink="/tienda/productos">Explorar colección</a>
+      </div>
+    }
+  }
+</main>
