@@ -1,0 +1,149 @@
+<app-tienda-nav />
+<main class="shop-main account-main">
+  <span class="eyebrow">TU ESPACIO EN TRAMA</span>
+  <h1>Mi cuenta</h1>
+  @if (cargando()) {
+    <div class="shop-empty" role="status">Cargando tus datos…</div>
+  } @else if (cuenta(); as u) {
+    <p>Revisá tus datos y mantenelos actualizados.</p>
+    <div class="account-layout">
+      <aside class="account-summary">
+        <div class="avatar">{{ u.nombre.slice(0, 1) }}{{ u.apellido.slice(0, 1) }}</div>
+        <h2>{{ u.nombre }} {{ u.apellido }}</h2>
+        <p>{{ u.email }}</p>
+        <span class="role">{{ u.rol === 'admin' ? 'Administrador' : 'Cliente' }}</span>
+        <p>
+          La dirección de tu cuenta se usará en los próximos pedidos. Los pedidos ya confirmados
+          conservan sus datos originales.
+        </p>
+      </aside>
+      <form #cuentaForm="ngForm" (ngSubmit)="guardar()">
+        <fieldset [disabled]="enProceso()">
+          <legend>Datos personales</legend>
+          <div class="fields">
+            <div>
+              <label for="cuenta-nombre">Nombre</label
+              ><input
+                id="cuenta-nombre"
+                name="nombre"
+                autocomplete="given-name"
+                required
+                maxlength="100"
+                [ngModel]="datos().nombre"
+                (ngModelChange)="editar('nombre', $event)"
+              />
+            </div>
+            <div>
+              <label for="cuenta-apellido">Apellido</label
+              ><input
+                id="cuenta-apellido"
+                name="apellido"
+                autocomplete="family-name"
+                required
+                maxlength="100"
+                [ngModel]="datos().apellido"
+                (ngModelChange)="editar('apellido', $event)"
+              />
+            </div>
+          </div>
+          <label for="cuenta-email">Email</label
+          ><input
+            id="cuenta-email"
+            name="email"
+            type="email"
+            email
+            autocomplete="email"
+            required
+            maxlength="254"
+            [ngModel]="datos().email"
+            (ngModelChange)="editar('email', $event)"
+          />
+          <label for="cuenta-direccion">Dirección</label
+          ><input
+            id="cuenta-direccion"
+            name="direccion"
+            autocomplete="street-address"
+            required
+            maxlength="255"
+            [ngModel]="datos().direccion"
+            (ngModelChange)="editar('direccion', $event)"
+          />
+        </fieldset>
+        <fieldset [disabled]="enProceso()">
+          <legend>Seguridad</legend>
+          <p>
+            Para cambiar el email o la contraseña, ingresá tu contraseña actual. Dejá la nueva
+            contraseña vacía si querés conservarla.
+          </p>
+          <label for="cuenta-actual">Contraseña actual</label
+          ><app-password-field
+            fieldId="cuenta-actual"
+            label="contraseña actual"
+            autocomplete="current-password"
+            [value]="actual()"
+            (valueChange)="actual.set($event)"
+            [disabled]="enProceso()"
+          />
+          <label for="cuenta-nueva">Nueva contraseña</label
+          ><app-password-field
+            fieldId="cuenta-nueva"
+            label="nueva contraseña"
+            [value]="nueva()"
+            (valueChange)="nueva.set($event)"
+            [disabled]="enProceso()"
+          />
+          <p class="hint">
+            Mínimo 8 caracteres, con mayúscula, minúscula y número. Se admiten símbolos. Máximo 72
+            bytes.
+          </p>
+          <label for="cuenta-repeticion">Repetir nueva contraseña</label
+          ><app-password-field
+            fieldId="cuenta-repeticion"
+            label="repetición de contraseña"
+            [value]="repeticion()"
+            (valueChange)="repeticion.set($event)"
+            [disabled]="enProceso()"
+          />
+          @if (errorPassword()) {
+            <p class="error" role="alert">{{ errorPassword() }}</p>
+          }
+          @if (requiereActual() && !actual()) {
+            <p class="hint">Ingresá tu contraseña actual para autorizar este cambio.</p>
+          }
+        </fieldset>
+        @if (error()) {
+          <p class="error" role="alert">{{ error() }}</p>
+        }
+        @if (mensaje()) {
+          <p class="success" role="status">{{ mensaje() }}</p>
+        }
+        <div class="actions">
+          <button
+            class="shop-button dark"
+            type="submit"
+            [disabled]="
+              enProceso() ||
+              cuentaForm.invalid ||
+              !tieneCambios() ||
+              !!errorPassword() ||
+              (requiereActual() && !actual())
+            "
+          >
+            {{ enProceso() ? 'Guardando…' : 'Guardar cambios' }}</button
+          ><button
+            class="shop-button"
+            type="button"
+            (click)="descartar()"
+            [disabled]="enProceso() || !tieneCambios()"
+          >
+            Descartar cambios
+          </button>
+        </div>
+      </form>
+    </div>
+  } @else {
+    <div class="shop-empty" role="alert">
+      {{ error() }} <button class="shop-button" (click)="cargar()">Reintentar</button>
+    </div>
+  }
+</main>

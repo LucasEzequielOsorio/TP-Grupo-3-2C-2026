@@ -1,0 +1,139 @@
+<app-admin-nav />
+<main class="tools-main">
+  <header>
+    <span class="eyebrow">LA BASE DE TU CATÁLOGO</span>
+    <h1>Clasificá a tu manera</h1>
+    <p>Creá y editá categorías, talles y colores desde el panel.</p>
+  </header>
+  <nav class="tabs" aria-label="Tipos de catálogo">
+    <button
+      (click)="cambiar('categorias')"
+      [class.active]="tipo === 'categorias'"
+      [disabled]="guardando()"
+    >
+      Categorías</button
+    ><button
+      (click)="cambiar('talles')"
+      [class.active]="tipo === 'talles'"
+      [disabled]="guardando()"
+    >
+      Talles</button
+    ><button
+      (click)="cambiar('colores')"
+      [class.active]="tipo === 'colores'"
+      [disabled]="guardando()"
+    >
+      Colores
+    </button>
+  </nav>
+  @if (error()) {
+    <p class="alert" role="alert">{{ error() }}</p>
+  }
+  @if (mensaje()) {
+    <p class="success" role="status">{{ mensaje() }}</p>
+  }
+  <div class="catalog-columns">
+    <section class="panel">
+      <div class="section-header">
+        <h2>
+          {{ tipo === 'categorias' ? 'Categorías' : tipo === 'talles' ? 'Talles' : 'Colores' }}
+        </h2>
+        <span>{{ catalogos()[tipo].length }} registros</span>
+      </div>
+      @if (cargando()) {
+        <div class="empty">Cargando…</div>
+      } @else {
+        <table>
+          <thead>
+            <tr>
+              <th>NOMBRE</th>
+              @if (tipo === 'talles') {
+                <th>ORDEN</th>
+              }
+              @if (tipo === 'colores') {
+                <th>COLOR</th>
+              }
+              <th>ACCIÓN</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of catalogos()[tipo]; track item.id) {
+              <tr>
+                <td>{{ item.nombre }}</td>
+                @if (tipo === 'talles') {
+                  <td>{{ item.orden }}</td>
+                }
+                @if (tipo === 'colores') {
+                  <td>
+                    <span class="swatch" [style.background]="item.hexadecimal || '#eeeeee'"></span
+                    >{{ item.hexadecimal || 'Sin muestra' }}
+                  </td>
+                }
+                <td>
+                  <button class="link-button" (click)="editar(item)" [disabled]="guardando()">
+                    Editar {{ item.nombre }}
+                  </button>
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td class="empty" colspan="3">Todavía no hay registros.</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </section>
+    <section class="panel catalog-form">
+      <h2>{{ id ? 'Editar registro' : 'Nuevo registro' }}</h2>
+      <form #formulario="ngForm" (ngSubmit)="guardar()">
+        <fieldset [disabled]="guardando()">
+          <label for="nombre">Nombre *</label
+          ><input
+            id="nombre"
+            name="nombre"
+            [(ngModel)]="nombre"
+            required
+            [maxlength]="tipo === 'talles' ? 20 : tipo === 'colores' ? 50 : 80"
+            placeholder="Nombre del registro"
+          />
+          @if (tipo === 'talles') {
+            <label for="orden">Orden de presentación</label
+            ><input
+              id="orden"
+              name="orden"
+              type="number"
+              min="0"
+              max="65535"
+              step="1"
+              required
+              [(ngModel)]="orden"
+            /><small>Los valores más pequeños aparecen primero.</small>
+          }
+          @if (tipo === 'colores') {
+            <label for="hexadecimal">Muestra de color</label
+            ><input
+              id="hexadecimal"
+              name="hexadecimal"
+              type="color"
+              [(ngModel)]="hexadecimal"
+            /><small>{{ hexadecimal }}</small>
+          }
+          <div class="form-actions">
+            <button type="button" (click)="cancelar()">Cancelar</button
+            ><button
+              class="primary"
+              [disabled]="formulario.invalid || !nombre.trim() || guardando()"
+            >
+              {{ guardando() ? 'Guardando…' : 'Guardar' }}
+            </button>
+          </div>
+        </fieldset>
+      </form>
+      <p class="info">
+        Los cambios de nombre se reflejan en los productos que usan este dato. Los registros se
+        conservan para mantener sus referencias.
+      </p>
+    </section>
+  </div>
+</main>

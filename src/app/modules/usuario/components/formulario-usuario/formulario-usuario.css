@@ -1,0 +1,63 @@
+:host {
+  display: block;
+}
+.password-field { position: relative; }
+.password-field input { padding-right: 52px; }
+.password-toggle { position: absolute; right: 3px; top: 3px; bottom: 3px; width: 42px; margin: 0; padding: 9px; background: transparent; color: #45623e; display: grid; place-items: center; }
+.password-toggle:hover { background: #eef3e9; }
+.password-toggle:focus-visible { outline: 2px solid #708964; outline-offset: 1px; }
+.password-toggle svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.password-help { margin: 0; color: #63725b; font-size: 11px; line-height: 1.6; }
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+label {
+  font-size: 11px;
+  color: #5b7050;
+  font-weight: 600;
+  margin-top: 9px;
+}
+input {
+  box-sizing: border-box;
+  width: 100%;
+  border: 1px solid #dce3d4;
+  background: white;
+  border-radius: 6px;
+  padding: 13px 12px;
+  color: #324a31;
+  font: inherit;
+  font-size: 13px;
+  outline-offset: 3px;
+}
+input:focus {
+  outline: 2px solid #b8cda5;
+}
+button {
+  margin-top: 17px;
+  padding: 14px;
+  border: 0;
+  background: #294b3a;
+  color: white;
+  border-radius: 7px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+span,
+ul {
+  font-size: 11px;
+  color: #a1503a;
+  line-height: 1.6;
+}
+ul {
+  margin: 0;
+  padding-left: 18px;
+}

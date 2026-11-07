@@ -1,3 +1,103 @@
-@for (producto of productos(); track producto.id) {
-<app-product-card #cardCard [producto]="producto" (carritoEvent)="AgregarAlCarrito(producto.id, cardCard)" (productoEvent)="VerProducto(producto.id)"></app-product-card>
-}
+<app-tienda-nav />
+<main class="shop-main">
+  <section class="hero">
+    <div class="hero-copy">
+      <span class="eyebrow">SIMPLE. CÓMODO. MUY VOS.</span>
+      <h1>Vestite a<br />tu manera<span>.</span></h1>
+      <p>Prendas que combinan con tu día.<br />Encontrá tus próximos esenciales.</p>
+      <a class="shop-button dark" href="/tienda/productos#coleccion" (click)="irColeccion($event)"
+        >Explorar colección <span>↘</span></a
+      ><small>TRAMA · TU ESTILO EMPIEZA ACÁ</small>
+    </div>
+    <div class="hero-visual">
+      <span class="hero-circle"></span>
+      <div class="hero-photo">
+        @if (portada(); as p) {
+          <img
+            [src]="p.imagen_url"
+            [alt]="p.nombre"
+            (error)="$any($event.target).style.visibility = 'hidden'"
+          />
+        } @else {
+          <svg viewBox="0 0 200 220" aria-hidden="true">
+            <path
+              d="m67 25-30 13L5 89l37 22 22-25v111h72V86l22 25 37-22-32-51-30-13c-6 26-60 26-66 0Z"
+              fill="#8c9b75"
+            />
+          </svg>
+        }
+      </div>
+      <span class="hero-caption">MENOS VUELTAS.<br />MÁS ESTILO.</span>
+    </div>
+  </section>
+  <section id="coleccion" class="collection">
+    <header class="collection-heading">
+      <div>
+        <span class="eyebrow">EL GUARDARROPA DE TODOS LOS DÍAS</span>
+        <h2>Nuestra colección</h2>
+      </div>
+      <p>Elegí lo que va con vos.</p>
+    </header>
+    <div class="category-tabs" aria-label="Categorías">
+      @for (c of categorias(); track c) {
+        <button
+          type="button"
+          [class.selected]="categoria() === c"
+          [attr.aria-pressed]="categoria() === c"
+          (click)="categoria.set(c)"
+        >
+          {{ c }}
+        </button>
+      }
+    </div>
+    <div class="shop-filters">
+      <input
+        type="search"
+        aria-label="Buscar prendas"
+        placeholder="Buscar una prenda…"
+        [ngModel]="busqueda()"
+        (ngModelChange)="busqueda.set($event)"
+      /><label class="stock-check"
+        ><input type="checkbox" [ngModel]="soloStock()" (ngModelChange)="soloStock.set($event)" />
+        Solo disponibles</label
+      ><select
+        aria-label="Ordenar productos"
+        [ngModel]="orden()"
+        (ngModelChange)="orden.set($event)"
+      >
+        <option value="nombre">Ordenar por nombre</option>
+        <option value="menor">Menor precio</option>
+        <option value="mayor">Mayor precio</option>
+      </select>
+    </div>
+    @if (error()) {
+      <div class="shop-empty" role="alert">
+        <h3>No pudimos mostrar la colección</h3>
+        <p>{{ error() }}</p>
+        <button class="shop-button dark" (click)="cargar()">Reintentar</button>
+      </div>
+    } @else if (cargando()) {
+      <div class="shop-empty" role="status">Estamos preparando la colección…</div>
+    } @else {
+      <p class="results">
+        {{ visibles().length }} {{ visibles().length === 1 ? 'prenda' : 'prendas' }}
+      </p>
+      <div class="product-grid">
+        @for (p of visibles(); track p.id) {
+          <app-product-card [producto]="p" (productoEvent)="VerProducto(p.id)" />
+        } @empty {
+          <div class="shop-empty">
+            <h3>No encontramos prendas para esa búsqueda</h3>
+            <p>Probá con otro nombre o explorá toda la colección.</p>
+            <button class="shop-button" (click)="limpiar()">Ver toda la colección</button>
+          </div>
+        }
+      </div>
+    }
+  </section>
+  <footer class="shop-footer">
+    <a class="footer-brand" routerLink="/tienda/productos">TRAMA.</a
+    ><span>Prendas para todos los días. Estilo para el tuyo.</span
+    ><a href="/tienda/productos#coleccion" (click)="irColeccion($event)">Volver a la colección ↑</a>
+  </footer>
+</main>

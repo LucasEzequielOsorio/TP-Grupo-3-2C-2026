@@ -1,0 +1,115 @@
+<app-admin-nav />
+<main class="tools-main">
+  <header>
+    <span class="eyebrow">TU INVENTARIO, EN CADA LUGAR</span>
+    <h1>Depósitos y tiendas</h1>
+    <p>Creá ubicaciones y administrá dónde se encuentran tus prendas.</p>
+  </header>
+  @if (error()) {
+    <div class="alert" role="alert">{{ error() }}</div>
+  }
+  @if (mensaje()) {
+    <div class="success" role="status">{{ mensaje() }}</div>
+  }
+  <div class="catalog-columns">
+    <section class="panel">
+      <div class="section-header">
+        <h2>Ubicaciones</h2>
+        <a routerLink="/admin/transferencias">Transferir stock ↗</a>
+      </div>
+      @if (cargando()) {
+        <div class="empty" role="status">Cargando ubicaciones…</div>
+      } @else {
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>NOMBRE / DIRECCIÓN</th>
+                <th>TIPO</th>
+                <th>UNIDADES</th>
+                <th>ESTADO</th>
+                <th>ACCIÓN</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (u of ubicaciones(); track u.id) {
+                <tr>
+                  <td>
+                    <strong
+                      ><a [routerLink]="['/admin/ubicaciones', u.id]">{{ u.nombre }} ↗</a></strong
+                    ><small>{{ u.direccion }}</small>
+                  </td>
+                  <td>{{ u.tipo === 'deposito' ? 'Depósito' : 'Tienda' }}</td>
+                  <td class="quantity">{{ u.unidades }}</td>
+                  <td>
+                    <span class="badge" [class.danger]="!u.activo">{{
+                      u.activo ? 'Activa' : 'Inactiva'
+                    }}</span>
+                  </td>
+                  <td>
+                    <button class="link-button" (click)="editar(u)" [disabled]="guardando()">
+                      Editar {{ u.nombre }}
+                    </button>
+                  </td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="5" class="empty">Creá tu primer depósito.</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </section>
+    <section class="panel catalog-form">
+      <h2>{{ formulario.id ? 'Editar ubicación' : 'Nueva ubicación' }}</h2>
+      <form #form="ngForm" (ngSubmit)="guardar()">
+        <fieldset [disabled]="guardando()">
+          <label for="nombre">Nombre *</label
+          ><input
+            id="nombre"
+            name="nombre"
+            [(ngModel)]="formulario.nombre"
+            maxlength="100"
+            required
+            placeholder="Ej. Depósito Norte"
+          /><label for="tipo">Tipo *</label
+          ><select id="tipo" name="tipo" [(ngModel)]="formulario.tipo">
+            <option value="deposito">Depósito</option>
+            <option value="tienda">Tienda / sucursal</option></select
+          ><label for="direccion">Dirección *</label
+          ><input
+            id="direccion"
+            name="direccion"
+            [(ngModel)]="formulario.direccion"
+            maxlength="255"
+            required
+            placeholder="Calle, número y localidad"
+          /><label class="inline-check"
+            ><input name="activo" type="checkbox" [(ngModel)]="formulario.activo" /> Ubicación
+            activa</label
+          >
+          <div class="form-actions">
+            <button type="button" (click)="cancelar()">Cancelar</button
+            ><button
+              class="primary"
+              [disabled]="
+                form.invalid ||
+                !formulario.nombre.trim() ||
+                !formulario.direccion.trim() ||
+                guardando()
+              "
+            >
+              {{ guardando() ? 'Guardando…' : 'Guardar ubicación' }}
+            </button>
+          </div>
+        </fieldset>
+      </form>
+      <p class="info">
+        Una ubicación nueva comienza sin stock. Usá una transferencia para ingresar mercadería desde
+        otro depósito. No se puede desactivar si tiene stock o transferencias pendientes.
+      </p>
+    </section>
+  </div>
+</main>

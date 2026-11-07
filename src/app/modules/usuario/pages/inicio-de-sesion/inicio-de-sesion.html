@@ -1,1 +1,44 @@
-<app-formulario-usuario [action]="'iniciar sesión'" [errorMessage]="errorMessage()" (submit)="iniciarSesion($event)" [sent]="waitingForResponse()"></app-formulario-usuario>
+<div class="auth-shell">
+  <aside>
+    <a class="brand" routerLink="/">TRAMA<span>.</span></a>
+    <div class="hero">
+      <span>PRENDAS CON IDENTIDAD</span>
+      <h1>Lo esencial.<br />Tu estilo.</h1>
+      <p>Un espacio para encontrar lo que va con vos.</p>
+      <div class="hero-art" aria-hidden="true">
+        <svg viewBox="0 0 250 250">
+          <path
+            d="m80 35-33 17-35 57 43 25 22-31v112h96V103l22 31 43-25-35-57-33-17c-10 34-80 34-90 0Z"
+            fill="#c6c6ad"
+          />
+          <path d="M80 35c10 34 80 34 90 0" fill="none" stroke="#979f83" stroke-width="5" />
+        </svg>
+      </div>
+    </div>
+    <small>TIENDA DE ROPA · HECHA PARA TODOS LOS DÍAS</small>
+  </aside>
+  <main>
+    <div class="auth-card">
+      <span class="eyebrow">BIENVENIDO A TRAMA</span>
+      <h2>Qué bueno verte</h2>
+      <p>Ingresá a tu cuenta para continuar.</p>
+      @if (registrado) {
+        <div class="notice" role="status">Tu cuenta está lista. Ya podés iniciar sesión.</div>
+      }
+      <app-formulario-usuario
+        [action]="'iniciar sesión'"
+        [errorMessage]="errorMessage()"
+        (submit)="iniciarSesion($event)"
+        [sent]="waitingForResponse()"
+      ></app-formulario-usuario>
+      <p class="signup-link">
+        ¿Todavía no tenés cuenta?
+        <a routerLink="/bienvenido/signup" [queryParams]="{ returnUrl: retorno }">Registrate</a>
+      </p>
+    </div>
+    <a class="browse-link" routerLink="/tienda/productos"
+      >Seguir mirando la tienda sin iniciar sesión →</a
+    >
+    <small class="auth-footer">Tu próxima prenda favorita empieza acá.</small>
+  </main>
+</div>

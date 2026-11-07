@@ -1,102 +1,113 @@
 import { inject, Service } from '@angular/core';
 import { DatosFormularioUsuario } from '../../modules/usuario/interfaces/datos-formulario-usuario';
-import { delay, Observable, of} from 'rxjs';
+import { Observable, of, tap } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
 import { DatosFormularioPerfil } from '../../modules/perfil/interfaces/datos-formulario-perfil';
 import { DatosProducto } from '../../modules/tienda/interfaces/datos-producto';
 
-export interface Usuario
-{
-  id:string;
-  email:string;
-  rol:string;
+export interface Usuario {
+  id: string;
+  email: string;
+  rol: string;
 }
-export interface RespuestaAuth{
-    token:string;
-    usuario:Usuario;
-    mensaje?:string;
+export interface RespuestaAuth {
+  token: string;
+  usuario: Usuario;
+  mensaje?: string;
 }
-export interface RespuestaCargaPerfil{
-  exito:boolean;
-  mensaje?:string;
+export interface CuentaUsuario extends Usuario {
+  nombre: string;
+  apellido: string;
+  direccion: string;
+}
+export interface ActualizacionCuenta {
+  email: string;
+  nombre: string;
+  apellido: string;
+  direccion: string;
+  password_actual?: string;
+  password_nueva?: string;
+}
+export interface RespuestaCargaPerfil {
+  exito: boolean;
+  mensaje?: string;
 }
 @Service()
 export class UsuarioService {
-  cargarPerfil(datos:DatosFormularioPerfil)
-  {
-    return of({
-      exito:true
+  getCuenta() {
+    return this.http.get<{ usuario: CuentaUsuario }>('/api/auth/cuenta', {
+      headers: { Authorization: 'Bearer ' + (localStorage.getItem('auth_token') || '') },
     });
   }
-  hasProfile()
-  {
-    return this.isLogged()? this.getProfile() !== null : false;
+  actualizarCuenta(datos: ActualizacionCuenta) {
+    return this.http
+      .put<RespuestaAuth & { usuario: CuentaUsuario }>('/api/auth/cuenta', datos, {
+        headers: { Authorization: 'Bearer ' + (localStorage.getItem('auth_token') || '') },
+      })
+      .pipe(
+        tap((res) => {
+          localStorage.setItem('auth_token', res.token);
+          localStorage.setItem('user_role', res.usuario.rol);
+        }),
+      );
   }
-  getProfile():Observable<DatosFormularioPerfil>
-  {
+  cargarPerfil(datos: DatosFormularioPerfil) {
     return of({
-      nombre:'Lucas',
-      apellido:'Osorio',
-      fechaNacimiento:'dd/mm/yyyy',
-      direccion:{
-        calle:'Brandsen',
-        altura:805,
+      exito: true,
+    });
+  }
+  hasProfile() {
+    return this.isLogged() ? this.getProfile() !== null : false;
+  }
+  getProfile(): Observable<DatosFormularioPerfil> {
+    return of({
+      nombre: 'Lucas',
+      apellido: 'Osorio',
+      fechaNacimiento: 'dd/mm/yyyy',
+      direccion: {
+        calle: 'Brandsen',
+        altura: 805,
         localidad: 'Buenos Aires',
-        codigoPostal:'C1161AAQ'
-      }
+        codigoPostal: 'C1161AAQ',
+      },
     });
   }
-  isLogged()
-  {
-    return localStorage.getItem('auth_token') !== null;
+  isLogged() {
+    const token = localStorage.getItem('auth_token');
+    if (!token) return false;
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+      if (payload.exp * 1000 > Date.now()) return true;
+    } catch {
+      /* Las sesiones simuladas anteriores no son válidas. */
+    }
+    this.logout();
+    return false;
   }
   isAdmin() {
-    return localStorage.getItem('user_role') === 'admin';
+    return this.isLogged() && localStorage.getItem('user_role') === 'admin';
   }
-  logout()
-  {
+  logout() {
     localStorage.removeItem('auth_token');
     localStorage.removeItem('user_role');
   }
 
   private http = inject(HttpClient);
-  registrarUsuario(usuario:DatosFormularioUsuario):Observable<RespuestaAuth>
-  {
-    //return this.http.post<RespuestaAuth>('${this.apiUrl}/registro', usuario); algo así sería al final (a chequear)
-
-    //para probar caso feliz:
-    return of({
-      token: '12323.123123.12123',
-      usuario:{
-        id:'1',
-        email:'a@a.com',
-        rol:'client'
-      }
-    }).pipe(delay(1500));
-
-
-    //para probar el cataclismo
-    /*return timer(1500).pipe(
-      switchMap(() => throwError(()=> new Error('rompiste todo amiguito')))
-    )*/
+  getSesion() {
+    return this.http.get<{ usuario: Usuario }>('/api/auth/me', {
+      headers: { Authorization: `Bearer ${localStorage.getItem('auth_token') || ''}` },
+    });
+  }
+  registrarUsuario(usuario: DatosFormularioUsuario): Observable<RespuestaAuth> {
+    return this.http.post<RespuestaAuth>('/api/auth/registro', usuario);
   }
 
-  iniciarSesion(usuario:DatosFormularioUsuario):Observable<RespuestaAuth>
-  {
-
-    //De nuevo: caso bien:
-      return of({
-        token:'123.123.123',
-        usuario:{
-          id:'1',
-          email:'a@a.com',
-          rol:'client'
-        }
-      }).pipe(delay(1500));
-
-      //Caso tragedia:
-      /*return timer(1500).pipe(
-        switchMap(() => throwError(()=> new Error('rompiste todo amiguito')))
-    )*/
+  iniciarSesion(usuario: DatosFormularioUsuario): Observable<RespuestaAuth> {
+    return this.http.post<RespuestaAuth>('/api/auth/login', usuario).pipe(
+      tap((res) => {
+        localStorage.setItem('auth_token', res.token);
+        localStorage.setItem('user_role', res.usuario.rol);
+      }),
+    );
   }
 }

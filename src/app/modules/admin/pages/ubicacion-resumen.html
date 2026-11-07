@@ -1,0 +1,160 @@
+<app-admin-nav />
+<main class="tools-main">
+  <a class="back-link" routerLink="/admin/ubicaciones">← Volver a depósitos</a>
+  @if (datos(); as d) {
+    <header class="inventory-header">
+      <div>
+        <span class="eyebrow">INVENTARIO POR UBICACIÓN</span>
+        <h1>{{ d.ubicacion.nombre }}</h1>
+        <p>
+          {{ d.ubicacion.tipo === 'deposito' ? 'Depósito' : 'Tienda' }} ·
+          {{ d.ubicacion.direccion }}
+        </p>
+      </div>
+      <span class="badge" [class.danger]="!d.ubicacion.activo">{{
+        d.ubicacion.activo ? 'Ubicación activa' : 'Ubicación inactiva'
+      }}</span>
+    </header>
+    <section class="location-stats" aria-label="Resumen del depósito">
+      <article>
+        <small>UNIDADES FÍSICAS</small><strong>{{ d.resumen.unidades }}</strong
+        ><span>Incluye existencias de prendas inactivas</span>
+      </article>
+      <article>
+        <small>PRENDAS CON STOCK</small><strong>{{ d.resumen.productos_con_stock }}</strong
+        ><span
+          >{{ d.resumen.variantes_con_stock }}
+          {{
+            d.resumen.variantes_con_stock === 1 ? 'variante con unidades' : 'variantes con unidades'
+          }}</span
+        >
+      </article>
+      <article>
+        <small>VARIANTES CON ALERTA</small><strong>{{ d.resumen.alertas }}</strong
+        ><span>{{ d.resumen.agotadas }} agotadas · incluye stock cero</span>
+      </article>
+      <article>
+        <small>EN TRÁNSITO</small
+        ><strong
+          >{{ d.resumen.entrando }} <span class="stat-arrow">↓</span> / {{ d.resumen.saliendo }}
+          <span class="stat-arrow">↑</span></strong
+        ><span>Entrando / saliendo · fuera del stock físico</span>
+      </article>
+    </section>
+    @if (!d.ubicacion.activo) {
+      <p class="info">
+        Esta ubicación está inactiva. Sus datos se conservan para consultar el inventario y el
+        historial.
+      </p>
+    }
+    <div class="summary-links">
+      <a routerLink="/admin/movimientos" [queryParams]="{ ubicacion_id: id }"
+        >Ver movimientos de esta ubicación ↗</a
+      ><a routerLink="/admin/transferencias">Administrar transferencias ↗</a>
+    </div>
+  }
+  @if (error()) {
+    <div class="alert" role="alert">
+      {{ error() }} <button type="button" (click)="cargar()">Reintentar</button>
+    </div>
+  }
+  <section class="panel">
+    <form class="toolbar" (ngSubmit)="cargar()">
+      <div>
+        <label for="buscar">Producto, SKU, talle o color</label
+        ><input
+          id="buscar"
+          name="buscar"
+          [(ngModel)]="buscar"
+          maxlength="100"
+          placeholder="Buscar en esta ubicación…"
+        />
+      </div>
+      <div>
+        <label for="estado">Existencias</label
+        ><select id="estado" name="estado" [(ngModel)]="estado">
+          <option value="todos">Todo el catálogo</option>
+          <option value="con_stock">Con stock físico</option>
+          <option value="bajo">Stock bajo y agotados</option>
+          <option value="agotado">Solo agotados</option>
+          <option value="inactivos">Productos o variantes inactivos</option>
+        </select>
+      </div>
+      <button class="primary" [disabled]="cargando()">Aplicar filtros</button>
+    </form>
+    @if (cargando()) {
+      <div class="empty" role="status">Consultando inventario…</div>
+    } @else if (datos(); as d) {
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>PRODUCTO / SKU</th>
+              <th>VARIANTE</th>
+              <th>CLASIFICACIÓN</th>
+              <th>UNIDADES</th>
+              <th>MÍNIMO</th>
+              <th>ESTADO</th>
+              <th>ACCIÓN</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (v of d.items; track v.variante_id) {
+              <tr>
+                <td>
+                  <strong>{{ v.producto }}</strong
+                  ><small>{{ v.sku }}</small>
+                </td>
+                <td>{{ v.color }} / {{ v.talle }}</td>
+                <td>{{ v.clasificacion }}</td>
+                <td class="quantity">{{ v.cantidad }}</td>
+                <td>{{ v.stock_minimo }}</td>
+                <td>
+                  <span
+                    class="badge"
+                    [class.danger]="v.cantidad === 0"
+                    [class.received]="
+                      v.cantidad > v.stock_minimo && v.producto_activo && v.variante_activa
+                    "
+                    >{{
+                      !v.producto_activo || !v.variante_activa
+                        ? 'Inactivo'
+                        : v.cantidad === 0
+                          ? 'Agotado'
+                          : v.cantidad <= v.stock_minimo
+                            ? 'Stock bajo'
+                            : 'Disponible'
+                    }}</span
+                  >
+                </td>
+                <td>
+                  <a [routerLink]="['/admin/productos', v.producto_id, 'editar']"
+                    >Editar producto ↗</a
+                  >
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="7" class="empty">
+                  No hay variantes para estos filtros. Probá otra búsqueda.
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <footer>
+        <span
+          >{{ d.total }} variantes · Página {{ d.pagina }} de {{ d.paginas }}. Los indicadores
+          muestran el depósito completo.</span
+        >
+        <div>
+          <button (click)="cargar(d.pagina - 1)" [disabled]="d.pagina <= 1">Anterior</button
+          ><button (click)="cargar(d.pagina + 1)" [disabled]="d.pagina >= d.paginas">
+            Siguiente
+          </button>
+        </div>
+      </footer>
+    }
+  </section>
+</main>

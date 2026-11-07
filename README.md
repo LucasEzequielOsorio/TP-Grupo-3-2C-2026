@@ -1,5 +1,26 @@
 # TPGrupo32C2026
 
+## Base de datos MySQL local
+
+El esquema, los datos de ejemplo y los pasos de instalación están en [backend/README.md](backend/README.md).
+Incluye productos con talles y colores, stock por ubicación y estructura para futuras transferencias.
+
+## Vista básica de tienda
+
+Desde **Ver tienda** en administración se abre `/tienda/productos`. Incluye portada, tarjetas con fotos y precios reales, categorías, búsqueda, filtro de disponibilidad y orden por precio o nombre. El detalle muestra descripción, galería y selección de talle/color con existencias de la variante en ubicaciones activas. Incluye estados de carga, errores y resultados vacíos. Conserva el acceso con sesión del proyecto.
+
+La tienda permite explorar el catálogo público y agregar prendas al carrito luego de iniciar sesión, seleccionando talle, color y cantidad. El carrito se guarda en MySQL por usuario y permite modificar cantidades y eliminar prendas. Al confirmar, se guarda el pedido con la dirección registrada, se descuenta stock y se vacía el carrito en una misma transacción. En “Mis pedidos” cada cliente consulta sus pedidos y el detalle histórico. Los productos y variantes inactivos no se publican. No se realizan pagos online.
+
+### Acceso público y roles
+
+La raíz `/` abre la tienda. El catálogo `/tienda/productos` y los detalles `/tienda/producto/:id` son públicos; no requieren cuenta. El encabezado del visitante ofrece **Iniciar sesión** y **Crear cuenta**. Login y registro también permiten volver a explorar sin autenticarse.
+
+Hay dos roles: `cliente` (todas las cuentas creadas por registro público) y `admin` (creado por el procedimiento privado documentado en el backend). Un cliente autenticado vuelve a la tienda y no ve enlaces de administración; el administrador accede al panel. Angular verifica el rol real contra `/api/auth/me` para abrir las rutas administrativas y el backend verifica sesión y rol en cada operación protegida. Modificar el rol en localStorage no concede acceso.
+
+Las rutas privadas, como el carrito y perfil, requieren sesión. Si se pide login para una ruta privada, se conserva un destino interno para regresar tras autenticarse. El registro público nunca permite elegir o asignarse el rol admin. El carrito usa precios actuales del servidor y controla disponibilidad al agregar o modificar; no reserva ni descuenta stock.
+
+Clientes y administradores acceden a **Mi cuenta** en `/perfil/mi-cuenta`: datos reales, edición de nombre, apellido, email, dirección y contraseña. Cambiar email o contraseña requiere la contraseña actual y renueva la sesión, invalidando las anteriores. El email sigue siendo único y las contraseñas mantienen validación de complejidad. Las rutas de perfil anteriores redirigen a esta pantalla. Para bases existentes ejecutar `node backend/scripts/migrate.js` antes de iniciar el backend actualizado.
+
 This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 22.1.6.
 
 ## Development server
