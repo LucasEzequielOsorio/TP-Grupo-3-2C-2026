@@ -107,6 +107,11 @@ button:focus-visible {
     flex-wrap: wrap;
   }
 }
+@media (max-width: 420px) {
+  .image-button {
+    height: 320px;
+  }
+}
 @media (prefers-reduced-motion: no-preference) {
   .image-button img {
     transition: transform 0.3s;

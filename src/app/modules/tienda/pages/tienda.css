@@ -549,3 +549,55 @@ h1 > span {
   border-radius: 5px;
   background: #fff;
 }
+@media (max-width: 420px) {
+  .shop-main {
+    padding: 16px 14px 0;
+  }
+  .hero {
+    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+  .hero-visual {
+    min-height: 200px;
+  }
+  .hero-photo {
+    width: 130px;
+    height: 190px;
+  }
+  .hero-circle {
+    width: 170px;
+    height: 170px;
+  }
+  .hero h1 {
+    font-size: 34px;
+  }
+  .shop-filters {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .shop-filters > input {
+    flex-basis: auto;
+  }
+  .shop-filters select {
+    max-width: none;
+  }
+  .stock-check {
+    margin-left: 0;
+  }
+  .product-grid {
+    grid-template-columns: 1fr;
+    gap: 22px;
+  }
+  .detail-copy h1 {
+    font-size: 26px;
+  }
+  .detail-copy > .shop-button {
+    width: 100%;
+    text-align: center;
+  }
+  .purchase-note input[type='number'] {
+    width: 100%;
+    margin: 10px 0 0;
+  }
+}
