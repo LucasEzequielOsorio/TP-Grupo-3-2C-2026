@@ -1,0 +1,376 @@
+<div class="editor-shell">
+  <nav class="editor-nav">
+    <a class="brand" routerLink="/admin/productos"
+      ><span class="brand-icon">T</span> TRAMA<span class="brand-dot">.</span></a
+    ><a routerLink="/admin/productos">← Volver al catálogo</a>
+  </nav>
+  <main class="editor-main">
+    <div class="breadcrumbs">
+      <a routerLink="/admin/productos">Productos</a><span>/</span
+      >{{ producto.id ? 'Editar producto' : 'Nuevo producto' }}
+    </div>
+    @if (producto.id) {
+      <div class="editor-links">
+        <a routerLink="/admin/movimientos" [queryParams]="{ producto_id: producto.id }"
+          >Ver movimientos ↗</a
+        ><a routerLink="/admin/alertas">Revisar stock bajo ↗</a>
+      </div>
+    }
+    <header class="page-header">
+      <div>
+        <span class="eyebrow">ADMINISTRACIÓN DEL CATÁLOGO</span>
+        <h1>{{ producto.id ? 'Editar producto' : 'Una nueva prenda' }}</h1>
+        <p>Los detalles hacen la diferencia. Dale forma a tu catálogo.</p>
+      </div>
+      <span class="workspace-tag">{{
+        producto.id ? 'Producto #' + producto.id : 'Alta de producto'
+      }}</span>
+    </header>
+    @if (error()) {
+      <div class="alert" role="alert">{{ error() }}</div>
+    }
+    @if (guardado() || creado) {
+      <div class="success" role="status">
+        Producto guardado correctamente. Los cambios ya están disponibles en el catálogo.
+      </div>
+    }
+    @if (cargando()) {
+      <div class="panel empty" role="status">Cargando datos del producto…</div>
+    } @else if (catalogos().categorias.length) {
+      <form
+        #formulario="ngForm"
+        (ngSubmit)="guardar()"
+        (input)="guardado.set(false); creado = false"
+      >
+        <fieldset class="editor-fieldset" [disabled]="guardando()">
+          <div class="editor-columns">
+            <div>
+              <section class="panel form-panel">
+                <div class="section-title">
+                  <span class="step">01</span>
+                  <div>
+                    <h2>Información del producto</h2>
+                    <p>Lo que tus clientes van a conocer de la prenda.</p>
+                  </div>
+                </div>
+                <label for="nombre">Nombre <span>*</span></label
+                ><input
+                  id="nombre"
+                  name="nombre"
+                  [(ngModel)]="producto.nombre"
+                  required
+                  maxlength="150"
+                  placeholder="Ej. Remera esencial de algodón"
+                />
+                <label for="descripcion">Descripción <span>*</span></label
+                ><textarea
+                  id="descripcion"
+                  name="descripcion"
+                  [(ngModel)]="producto.descripcion"
+                  required
+                  maxlength="5000"
+                  rows="4"
+                  placeholder="Contá cómo es la prenda: material, calce y detalles…"
+                ></textarea>
+                <div class="two-columns">
+                  <div>
+                    <label for="categoria">Clasificación <span>*</span></label
+                    ><select
+                      id="categoria"
+                      name="categoria"
+                      [(ngModel)]="producto.categoria_id"
+                      required
+                    >
+                      @for (c of catalogos().categorias; track c.id) {
+                        <option [ngValue]="c.id">{{ c.nombre }}</option>
+                      }
+                    </select>
+                  </div>
+                  <div>
+                    <label for="precio">Precio en ARS <span>*</span></label
+                    ><input
+                      id="precio"
+                      name="precio"
+                      type="number"
+                      [(ngModel)]="producto.precio"
+                      required
+                      min="0.01"
+                      max="99999999.99"
+                      step="0.01"
+                    /><small class="field-help">Precio compartido por todas las variantes.</small>
+                  </div>
+                </div>
+              </section>
+              <section class="panel form-panel">
+                <div class="section-title">
+                  <span class="step">02</span>
+                  <div>
+                    <h2>Talles, colores y existencias</h2>
+                    <p>Cada combinación es una variante con su propio SKU.</p>
+                  </div>
+                </div>
+                @for (v of producto.variantes; track $index; let i = $index) {
+                  <article class="variant-card">
+                    <div class="variant-heading">
+                      <strong>Variante {{ i + 1 }}</strong>
+                      @if (v.id) {
+                        <label class="check"
+                          ><input type="checkbox" [name]="'activo' + i" [(ngModel)]="v.activo" />
+                          Activa</label
+                        >
+                      } @else if (producto.variantes.length > 1) {
+                        <button type="button" class="text-button" (click)="quitarVariante(i)">
+                          Quitar
+                        </button>
+                      }
+                    </div>
+                    <div class="variant-grid">
+                      <div>
+                        <label [for]="'talle' + i">Talle *</label
+                        ><select
+                          [id]="'talle' + i"
+                          [name]="'talle' + i"
+                          [(ngModel)]="v.talle_id"
+                          [disabled]="!!v.id"
+                          required
+                        >
+                          @for (t of catalogos().talles; track t.id) {
+                            <option [ngValue]="t.id">{{ t.nombre }}</option>
+                          }
+                        </select>
+                      </div>
+                      <div>
+                        <label [for]="'color' + i">Color *</label
+                        ><select
+                          [id]="'color' + i"
+                          [name]="'color' + i"
+                          [(ngModel)]="v.color_id"
+                          [disabled]="!!v.id"
+                          required
+                        >
+                          @for (c of catalogos().colores; track c.id) {
+                            <option [ngValue]="c.id">{{ c.nombre }}</option>
+                          }
+                        </select>
+                      </div>
+                      <div>
+                        <label [for]="'sku' + i">SKU *</label
+                        ><input
+                          [id]="'sku' + i"
+                          [name]="'sku' + i"
+                          [(ngModel)]="v.sku"
+                          required
+                          maxlength="64"
+                          pattern="[A-Za-z0-9_-]+"
+                          placeholder="REM-M-NEG"
+                        />
+                      </div>
+                    </div>
+                    <div class="stock-grid">
+                      <div>
+                        <label [for]="'minimo' + i">Mínimo por ubicación</label
+                        ><input
+                          [id]="'minimo' + i"
+                          [name]="'minimo' + i"
+                          type="number"
+                          [(ngModel)]="v.stock_minimo"
+                          min="0"
+                          max="1000000"
+                          step="1"
+                          required
+                        /><small class="field-help"
+                          >Avisar cuando el stock sea igual o menor.</small
+                        >
+                      </div>
+                      @for (e of v.existencias; track e.ubicacion_id) {
+                        <div>
+                          <label [for]="'stock' + i + '-' + e.ubicacion_id">{{
+                            ubicacion(e.ubicacion_id)
+                          }}</label
+                          ><input
+                            [id]="'stock' + i + '-' + e.ubicacion_id"
+                            [name]="'stock' + i + '-' + e.ubicacion_id"
+                            type="number"
+                            [(ngModel)]="e.cantidad"
+                            min="0"
+                            max="1000000"
+                            step="1"
+                            required
+                            [disabled]="!ubicacionActiva(e.ubicacion_id)"
+                          />
+                        </div>
+                      }
+                    </div>
+                    @if (v.id) {
+                      <small class="field-help"
+                        >El talle y color se conservan para mantener el historial. Podés desactivar
+                        esta variante y crear otra.</small
+                      >
+                    }
+                  </article>
+                }
+                <button class="button add-variant" type="button" (click)="agregarVariante()">
+                  + Agregar variante
+                </button>
+              </section>
+            </div>
+            <aside class="editor-aside">
+              @if (cambiosStock().length) {
+                <section class="panel form-panel adjustment-panel">
+                  <h2>Ajuste de existencias</h2>
+                  <p class="field-help">
+                    Vas a cambiar {{ cambiosStock().length }}
+                    {{ cambiosStock().length === 1 ? 'cantidad' : 'cantidades' }}. El motivo se
+                    registrará en cada movimiento.
+                  </p>
+                  <ul class="stock-changes">
+                    @for (c of cambiosStock(); track $index) {
+                      <li>
+                        <strong>{{ c.variante }}</strong
+                        ><small>{{ c.ubicacion }} · {{ c.antes }} → {{ c.despues }} unidades</small>
+                      </li>
+                    }
+                  </ul>
+                  <label for="motivo-ajuste">Motivo del ajuste *</label
+                  ><select
+                    id="motivo-ajuste"
+                    name="motivo-ajuste"
+                    [(ngModel)]="motivoAjuste"
+                    required
+                  >
+                    <option value="">Seleccioná un motivo</option>
+                    <option value="conteo_fisico">Conteo físico / corrección</option>
+                    <option value="mercaderia_danada">Mercadería dañada</option>
+                    <option value="ingreso_mercaderia">Ingreso de mercadería</option>
+                    <option value="devolucion_cliente">Devolución de cliente</option>
+                    <option value="otro">Otro</option>
+                  </select>
+                  <label for="observacion-ajuste"
+                    >Observación {{ motivoAjuste === 'otro' ? '*' : '(opcional)' }}</label
+                  ><textarea
+                    id="observacion-ajuste"
+                    name="observacion-ajuste"
+                    rows="3"
+                    [(ngModel)]="observacionAjuste"
+                    [required]="motivoAjuste === 'otro'"
+                    maxlength="255"
+                    placeholder="Ej. Recuento de estantería, ingreso de proveedor…"
+                  ></textarea
+                  ><small class="field-help"
+                    >Daño descuenta; ingreso y devolución suman. Para un recuento con altas y bajas,
+                    usá conteo físico. Los traslados entre depósitos se hacen desde
+                    Transferencias.</small
+                  >
+                </section>
+              }
+              <section class="panel form-panel">
+                <h2>
+                  Fotos del producto <span class="count">{{ fotos.length }} / 8</span>
+                </h2>
+                <div class="image-preview">
+                  @if (fotos.length) {
+                    <img
+                      [src]="fotos[0].url"
+                      alt="Vista previa del producto"
+                      (error)="imagenError.set('No se pudo mostrar la imagen. Elegí otro archivo.')"
+                      (load)="imagenError.set('')"
+                    />
+                  } @else {
+                    <span>◇<small>Tu prenda, en primer plano</small></span>
+                  }
+                </div>
+                <div class="gallery-grid">
+                  @for (foto of fotos; track foto.clave; let index = $index) {
+                    <div class="gallery-item">
+                      <label [for]="'foto-color-' + index" class="photo-color-label"
+                        >Color de la foto</label
+                      ><select
+                        [id]="'foto-color-' + index"
+                        [name]="'foto-color-' + index"
+                        [(ngModel)]="foto.color_id"
+                      >
+                        <option [ngValue]="null">General · todos los colores</option>
+                        @for (c of coloresFoto(); track c.id) {
+                          <option [ngValue]="c.id">{{ c.nombre }}</option>
+                        }
+                      </select>
+                      <img [src]="foto.url" [alt]="'Foto ' + (index + 1) + ' del producto'" />
+                      @if (index === 0) {
+                        <span class="gallery-main">Principal</span>
+                      } @else {
+                        <button type="button" class="text-button" (click)="hacerPrincipal(index)">
+                          Hacer principal
+                        </button>
+                      }
+                      <button
+                        type="button"
+                        class="gallery-remove"
+                        (click)="quitarImagen(index)"
+                        [attr.aria-label]="'Quitar foto ' + (index + 1)"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  }
+                </div>
+                <input
+                  #selectorImagen
+                  id="imagen"
+                  type="file"
+                  multiple
+                  accept="image/jpeg,image/png,image/webp"
+                  class="sr-only"
+                  (change)="seleccionarImagen($event)"
+                  aria-label="Elegir imagen del producto"
+                  aria-describedby="imagen-ayuda"
+                />
+                <button
+                  class="button secondary image-upload"
+                  type="button"
+                  (click)="selectorImagen.click()"
+                >
+                  Agregar fotos
+                </button>
+                <small class="field-help" id="imagen-ayuda"
+                  >Hasta 8 fotos JPG, PNG o WebP de hasta 5 MB cada una. Asigná un color a cada foto
+                  o dejala como general. La primera es la principal del catálogo. Se suben al
+                  guardar.</small
+                >
+                @if (imagenError()) {
+                  <p class="image-error" role="alert">{{ imagenError() }}</p>
+                }
+              </section>
+              <section class="panel form-panel">
+                <h2>Visibilidad</h2>
+                <label class="check visibility"
+                  ><input type="checkbox" name="activo" [(ngModel)]="producto.activo" /> Producto
+                  activo</label
+                >
+                <p class="field-help">
+                  Los productos inactivos se ocultan de la tienda y conservan su historial.
+                </p>
+              </section>
+              <div class="editor-note">
+                <strong>Stock con trazabilidad</strong>
+                <p>Cada cambio de cantidad registra un movimiento por variante y ubicación.</p>
+              </div>
+            </aside>
+          </div>
+          <footer class="form-footer">
+            <span>* Campos obligatorios</span>
+            <div>
+              <a class="button secondary" routerLink="/admin/productos">Volver al listado</a
+              ><button
+                class="button primary"
+                type="submit"
+                [disabled]="formulario.invalid || guardando()"
+              >
+                {{ guardando() ? 'Guardando…' : 'Guardar producto' }}
+              </button>
+            </div>
+          </footer>
+        </fieldset>
+      </form>
+    }
+  </main>
+</div>

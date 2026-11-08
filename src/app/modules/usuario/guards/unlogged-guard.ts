@@ -9,5 +9,5 @@ export const unloggedGuard: CanActivateFn = (route, state) => {
   {
     return true;
   }
-  return router.createUrlTree(['/tienda']);
+  return router.createUrlTree([usuarioService.isAdmin() ? '/admin/productos' : '/tienda']);
 };

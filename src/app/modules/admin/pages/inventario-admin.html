@@ -1,0 +1,180 @@
+<app-admin-nav />
+<main class="tools-main">
+  <header>
+    <span class="eyebrow">CONTROL DE INVENTARIO</span>
+    <h1>{{ modo === 'alertas' ? 'Cada variante cuenta' : 'Historial de movimientos' }}</h1>
+    <p>
+      {{
+        modo === 'alertas'
+          ? 'Identificá los talles y colores que necesitan reposición en cada ubicación.'
+          : 'Consultá cuándo cambió el stock, por qué y quién lo modificó.'
+      }}
+    </p>
+  </header>
+  <section class="panel">
+    <form class="toolbar" (ngSubmit)="cargar()">
+      <div>
+        <label for="ubicacion">Ubicación</label
+        ><select id="ubicacion" name="ubicacion" [(ngModel)]="ubicacion">
+          <option [ngValue]="0">Todas las ubicaciones</option>
+          @for (u of ubicaciones(); track u.id) {
+            <option [ngValue]="u.id">{{ u.nombre }}</option>
+          }
+        </select>
+      </div>
+      @if (modo === 'movimientos') {
+        <div>
+          <label for="buscar">Producto o SKU</label
+          ><input
+            id="buscar"
+            name="buscar"
+            [(ngModel)]="buscar"
+            maxlength="100"
+            placeholder="Buscar movimientos…"
+          />
+        </div>
+        <div>
+          <label for="motivo">Motivo</label
+          ><select id="motivo" name="motivo" [(ngModel)]="motivo">
+            <option value="">Todos los motivos</option>
+            <option value="inicial">Inicial</option>
+            <option value="ajuste">Ajuste</option>
+            <option value="venta">Venta</option>
+            <option value="devolucion">Devolución</option>
+            <option value="transferencia">Transferencia</option>
+          </select>
+        </div>
+      }
+      <button class="primary" [disabled]="cargando()">
+        {{ cargando() ? 'Consultando…' : 'Aplicar filtros' }}
+      </button>
+    </form>
+    @if (productoId && modo === 'movimientos') {
+      <div class="info">
+        Movimientos del producto #{{ productoId }}
+        <button class="link-button" (click)="limpiarProducto()">Ver todos</button>
+      </div>
+    }
+    @if (error()) {
+      <div class="alert" role="alert">{{ error() }}</div>
+    } @else if (cargando()) {
+      <div class="empty" role="status">Cargando inventario…</div>
+    } @else if (modo === 'alertas') {
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>PRODUCTO / SKU</th>
+              <th>VARIANTE</th>
+              <th>UBICACIÓN</th>
+              <th>DISPONIBLE</th>
+              <th>MÍNIMO</th>
+              <th>ESTADO</th>
+              <th>ACCIÓN</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (a of alertas(); track a.variante_id + ':' + a.ubicacion_id) {
+              <tr>
+                <td>
+                  <strong>{{ a.producto }}</strong
+                  ><small>{{ a.sku }}</small>
+                </td>
+                <td>{{ a.color }} / {{ a.talle }}</td>
+                <td>{{ a.ubicacion }}</td>
+                <td class="quantity">{{ a.cantidad }}</td>
+                <td>{{ a.stock_minimo }}</td>
+                <td>
+                  <span class="badge" [class.danger]="a.cantidad === 0">{{
+                    a.cantidad === 0 ? 'Agotado' : 'Stock bajo'
+                  }}</span>
+                </td>
+                <td>
+                  <a [routerLink]="['/admin/productos', a.producto_id, 'editar']"
+                    >Revisar producto ↗</a
+                  >
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="7" class="empty">
+                  Todo en orden. No hay variantes con stock bajo en estas ubicaciones.
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <footer>
+        {{ alertas().length }} alertas · Se avisa cuando la cantidad es menor o igual al mínimo.
+        Incluye variantes sin existencias.
+      </footer>
+    } @else {
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>FECHA</th>
+              <th>PRODUCTO / VARIANTE</th>
+              <th>UBICACIÓN</th>
+              <th>CAMBIO</th>
+              <th>MOTIVO</th>
+              <th>RESPONSABLE</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (m of historial().items; track m.id) {
+              <tr>
+                <td>{{ m.creado_en | date: 'dd/MM/yyyy HH:mm' }}</td>
+                <td>
+                  <a [routerLink]="['/admin/productos', m.producto_id, 'editar']">{{
+                    m.producto
+                  }}</a
+                  ><small>{{ m.sku }} · {{ m.color }} / {{ m.talle }}</small>
+                </td>
+                <td>{{ m.ubicacion }}</td>
+                <td
+                  class="quantity"
+                  [class.positive]="m.cantidad > 0"
+                  [class.negative]="m.cantidad < 0"
+                >
+                  {{ m.cantidad > 0 ? '+' : '' }}{{ m.cantidad }}
+                </td>
+                <td>
+                  <span class="badge">{{ m.motivo }}</span>
+                  @if (m.causa_ajuste) {
+                    <small
+                      ><strong>{{ causa(m.causa_ajuste) }}</strong></small
+                    >
+                  }
+                  <small>{{ m.observacion }}</small>
+                </td>
+                <td>{{ m.usuario }}</td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="6" class="empty">No hay movimientos para estos filtros.</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <footer>
+        <span
+          >{{ historial().total }} movimientos · Página {{ historial().pagina }} de
+          {{ historial().paginas }}</span
+        >
+        <div>
+          <button (click)="cargar(historial().pagina - 1)" [disabled]="historial().pagina <= 1">
+            Anterior</button
+          ><button
+            (click)="cargar(historial().pagina + 1)"
+            [disabled]="historial().pagina >= historial().paginas"
+          >
+            Siguiente
+          </button>
+        </div>
+      </footer>
+    }
+  </section>
+</main>

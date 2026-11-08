@@ -1,0 +1,22 @@
+.product-gallery {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-block: 12px;
+}
+.product-gallery button {
+  padding: 3px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  background: white;
+  cursor: pointer;
+}
+.product-gallery button[aria-pressed='true'] {
+  border: 2px solid #284d3e;
+}
+.product-gallery img {
+  display: block;
+  width: 65px;
+  height: 75px;
+  object-fit: cover;
+}

@@ -1,0 +1,121 @@
+.cart-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(270px, 1fr);
+  gap: 40px;
+  margin: 35px 0;
+}
+.cart-item {
+  display: flex;
+  gap: 24px;
+  padding: 24px 0;
+  border-bottom: 1px solid #dce1d5;
+  align-items: flex-start;
+}
+.cart-photo {
+  width: 115px;
+  height: 145px;
+  flex-shrink: 0;
+  background: #e9edde;
+  display: grid;
+  place-items: center;
+  color: #284d3e;
+}
+.cart-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.cart-description {
+  flex: 1;
+}
+.cart-description a {
+  color: #284d3e;
+  text-decoration: none;
+}
+.cart-description h2 {
+  font-size: 19px;
+  margin: 0 0 10px;
+}
+.cart-description p {
+  font-size: 13px;
+  color: #65715f;
+  margin: 8px 0;
+}
+.cart-description label {
+  font-size: 12px;
+  margin-right: 10px;
+}
+.cart-description input {
+  width: 65px;
+  padding: 8px;
+  border: 1px solid #cbd5c1;
+  border-radius: 5px;
+  background: white;
+}
+.remove {
+  border: 0;
+  background: none;
+  text-decoration: underline;
+  color: #7f493c;
+  cursor: pointer;
+  padding: 5px 0;
+}
+.cart-summary {
+  background: #f0f3e9;
+  border: 1px solid #dce4d3;
+  padding: 28px;
+  height: fit-content;
+  border-radius: 8px;
+}
+.cart-summary p,
+.cart-summary small {
+  font-size: 13px;
+  line-height: 1.6;
+  color: #5a6853;
+}
+.cart-summary .shop-button {
+  display: block;
+  text-align: center;
+  margin: 14px 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+.cart-total {
+  display: flex;
+  justify-content: space-between;
+  font-size: 21px;
+  border-top: 1px solid #d0dac8;
+  padding-top: 24px;
+  margin-top: 24px;
+}
+.cart-alert {
+  background: #fff1de;
+  padding: 18px;
+  border-radius: 6px;
+  margin: 20px 0;
+  color: #754c20;
+}
+.cart-description .cart-warning {
+  color: #a23e24;
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+@media (max-width: 800px) {
+  .cart-layout {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  .cart-item {
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .cart-photo {
+    width: 85px;
+    height: 110px;
+  }
+  .cart-item > strong {
+    margin-left: auto;
+  }
+}

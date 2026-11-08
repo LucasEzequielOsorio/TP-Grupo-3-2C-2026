@@ -1,13 +1,131 @@
-<h1>Mi Carrito</h1>
-@if(carrito().items.length > 0)
-{
-  <form (submit)="this.IniciarCompra($event)">
-    @for(item of carrito().items; track $index){
-<span>{{item.producto.nombre}}</span>
-<label for="">Cantidad: </label><input type="number" [formField]="carritoForm.items[$index].cantidad">
-<span><strong>subtotal: </strong> {{ item.producto.precio * item.cantidad | currency:'ARS':'symbol':'1.2-2' }}</span>
+<app-tienda-nav />
+<main class="shop-main">
+  <nav class="breadcrumbs" aria-label="Ubicación">
+    <a routerLink="/tienda/productos">Colección</a><span>/</span><span>Mi carrito</span>
+  </nav>
+  <span class="eyebrow">TU SELECCIÓN</span>
+  <h1>Mi pedido</h1>
+  <p>Revisá tus prendas y elegí las cantidades antes de continuar.</p>
+  @if (error()) {
+    <div class="cart-alert" role="alert">
+      {{ error() }} <button (click)="cargar()" [disabled]="ocupado()">Actualizar carrito</button>
+    </div>
+  }
+  @if (cargando()) {
+    <div class="shop-empty" role="status">Cargando tu pedido…</div>
+  } @else if (carrito().items.length) {
+    @if (cambiosStock()) {
+      <p class="cart-alert" role="alert">
+        Cambió la disponibilidad de algunas prendas. Ajustá las cantidades o eliminá los productos
+        sin stock.
+      </p>
     }
-    <button type="submit" [disabled]="!carritoForm().valid()">Realizar compra</button>
-  </form>
-}
-
+    <div class="cart-layout" [attr.aria-busy]="ocupado()">
+      <section aria-label="Productos del pedido">
+        @for (item of carrito().items; track item.variante_id) {
+          <article class="cart-item">
+            <a [routerLink]="['/tienda/producto', item.producto_id]" class="cart-photo">
+              @if (item.imagen_url) {
+                <img
+                  [src]="item.imagen_url"
+                  [alt]="item.nombre"
+                  (error)="$any($event.target).style.display = 'none'"
+                />
+              } @else {
+                <span>TRAMA.</span>
+              }
+            </a>
+            <div class="cart-description">
+              <a [routerLink]="['/tienda/producto', item.producto_id]"
+                ><h2>{{ item.nombre }}</h2></a
+              >
+              <p>Talle {{ item.talle }} · {{ item.color }}</p>
+              <p>{{ item.precio | currency: 'ARS' : 'symbol' : '1.2-2' }} por unidad</p>
+              <label [for]="'cantidad-' + item.variante_id">Cantidad</label>
+              <input
+                [id]="'cantidad-' + item.variante_id"
+                type="number"
+                min="1"
+                [max]="item.stock"
+                [value]="item.cantidad"
+                (change)="cambiar(item, $event)"
+                [disabled]="ocupado() || item.stock === 0"
+              />
+              <p [class.cart-warning]="item.cantidad > item.stock">
+                {{
+                  item.stock > 0
+                    ? 'Disponible: ' + item.stock + ' unidades'
+                    : 'Ya no está disponible'
+                }}
+              </p>
+              <button
+                class="remove"
+                (click)="eliminar(item)"
+                [disabled]="ocupado()"
+                [attr.aria-label]="
+                  'Eliminar ' + item.nombre + ' talle ' + item.talle + ' ' + item.color
+                "
+              >
+                Eliminar
+              </button>
+            </div>
+            <strong>{{ item.subtotal | currency: 'ARS' : 'symbol' : '1.2-2' }}</strong>
+          </article>
+        }
+      </section>
+      <aside class="cart-summary" aria-label="Resumen del pedido">
+        <span class="eyebrow">RESUMEN</span>
+        <h2>Tu selección</h2>
+        <p>
+          {{ carrito().unidades }} {{ carrito().unidades === 1 ? 'prenda' : 'prendas' }} ·
+          {{ carrito().items.length }}
+          {{ carrito().items.length === 1 ? 'combinación' : 'combinaciones' }}
+        </p>
+        <div class="cart-total">
+          <span>Total</span
+          ><strong>{{ carrito().total | currency: 'ARS' : 'symbol' : '1.2-2' }}</strong>
+        </div>
+        <p>
+          Precios y disponibilidad actuales. El carrito se guarda en tu cuenta y no reserva stock.
+        </p>
+        <button class="shop-button dark" (click)="revisar()" [disabled]="ocupado()">
+          {{ ocupado() ? 'Actualizando…' : 'Actualizar disponibilidad' }}
+        </button>
+        <a class="shop-button" routerLink="/tienda/productos">Seguir comprando →</a>
+        @if (revisando()) {
+          <section class="order-review" aria-label="Confirmar pedido">
+            <h3>¿Confirmás tu pedido?</h3>
+            <p>
+              Dirección de entrega: <strong>{{ direccion() }}</strong>
+            </p>
+            <p>
+              Se descontarán las prendas del stock. Esta confirmación no realiza ningún cobro
+              online.
+            </p>
+            <button class="shop-button dark" (click)="confirmar()" [disabled]="ocupado()">
+              {{ ocupado() ? 'Confirmando…' : 'Confirmar pedido' }}
+            </button>
+            <button class="shop-button" (click)="revisando.set(false)" [disabled]="ocupado()">
+              Volver al carrito
+            </button>
+          </section>
+        } @else {
+          <button
+            class="shop-button dark"
+            (click)="abrirConfirmacion()"
+            [disabled]="ocupado() || cambiosStock()"
+          >
+            Revisar y confirmar pedido
+          </button>
+        }
+        <small>La confirmación guarda tu pedido. No se realizan pagos online.</small>
+      </aside>
+    </div>
+  } @else if (!error()) {
+    <div class="shop-empty">
+      <h2>Tu próxima prenda te espera</h2>
+      <p>Todavía no agregaste productos al carrito.</p>
+      <a class="shop-button dark" routerLink="/tienda/productos">Explorar la colección</a>
+    </div>
+  }
+</main>
