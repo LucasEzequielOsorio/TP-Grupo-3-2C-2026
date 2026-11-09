@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { pool, transaction } from './db.js';
-import { authenticate } from './auth.js';
+import { authenticate } from './controllers/authController.js';
 import { httpError, parseId } from './validation.js';
 export const ordersRouter = Router();
 ordersRouter.use(authenticate);

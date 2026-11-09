@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { pool, transaction } from './db.js';
-import { authenticate, requireAdmin } from './auth.js';
+import { authenticate, requireAdmin } from './controllers/authController.js';
 import { httpError, parseId } from './validation.js';
 
 export const transfersRouter = Router();
