@@ -1,7 +1,7 @@
 import express from 'express';
 import helmet from 'helmet';
 import { ZodError } from 'zod';
-import { authRouter, authenticate } from './auth.js';
+import { authRouter } from './controllers/authController.js';
 import { productsRouter, adminRouter } from './products.js';
 import { pool } from './db.js';
 import { imageRouter, imagesDirectory } from './images.js';
@@ -20,7 +20,6 @@ app.get('/api/health', async (req, res) => {
   res.json({ estado: 'ok' });
 });
 app.use('/api/auth', authRouter);
-app.get('/api/auth/me', authenticate, (req, res) => res.json({ usuario: req.user }));
 app.use('/api/productos', productsRouter);
 app.use('/api/carrito', cartRouter);
 app.use('/api/pedidos', ordersRouter);
