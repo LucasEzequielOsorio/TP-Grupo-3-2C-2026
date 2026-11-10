@@ -1,5 +1,5 @@
 import { pool, transaction } from '../db.js';
-import { getProduct } from '../products.js';
+import { getProduct } from './products.service.js';
 import {
   deleteCartItem,
   findActiveVariant,
