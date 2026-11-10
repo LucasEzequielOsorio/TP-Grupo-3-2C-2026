@@ -1,7 +1,7 @@
 import express from 'express';
 import helmet from 'helmet';
 import { ZodError } from 'zod';
-import { authRouter } from './controllers/authController.js';
+import { authRouter } from './controllers/auth.controller.js';
 import { productsRouter, adminRouter } from './products.js';
 import { pool } from './db.js';
 import { imageRouter, imagesDirectory } from './images.js';

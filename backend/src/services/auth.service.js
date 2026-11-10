@@ -10,7 +10,7 @@ import {
   findUserById,
   findUserForAccountUpdate,
   updateUserAccount,
-} from '../repositories/authRepository.js';
+} from '../repositories/auth.repository.js';
 
 const publicUser = (u) => ({ id: String(u.id), email: u.email, rol: u.rol });
 const accountUser = (u) => ({

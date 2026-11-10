@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
-import { authenticate, requireAdmin } from './controllers/authController.js';
+import { authenticate, requireAdmin } from './middlewares/auth.middleware.js';
 import { httpError } from './validation.js';
 
 export const imagesDirectory = fileURLToPath(new URL('../uploads/', import.meta.url));

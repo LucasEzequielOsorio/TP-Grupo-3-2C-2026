@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { pool, transaction } from './db.js';
-import { authenticate, requireAdmin } from './controllers/authController.js';
+import { authenticate, requireAdmin } from './middlewares/auth.middleware.js';
 import { httpError, parseId, productSchema, gallerySchema, photosSchema } from './validation.js';
 
 export const productsRouter = Router();

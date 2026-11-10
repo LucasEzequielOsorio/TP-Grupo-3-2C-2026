@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { pool, transaction } from './db.js';
-import { authenticate } from './controllers/authController.js';
+import { authenticate } from './middlewares/auth.middleware.js';
 import { getProduct } from './products.js';
 import { httpError, parseId } from './validation.js';
 

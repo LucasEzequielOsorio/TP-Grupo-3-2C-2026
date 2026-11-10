@@ -1,14 +1,14 @@
 import { Router } from 'express';
 import { rateLimit } from 'express-rate-limit';
 import { z } from 'zod';
-import { httpError, loginSchema, registerSchema } from '../validation.js';
+import { loginSchema, registerSchema } from '../validation.js';
+import { authenticate } from '../middlewares/auth.middleware.js';
 import {
-  authenticateToken,
   getAccount,
   loginUser,
   registerUser,
   updateAccount,
-} from '../services/authService.js';
+} from '../services/auth.service.js';
 
 export const authRouter = Router();
 
@@ -46,20 +46,6 @@ authRouter.post('/registro', async (req, res) => {
   res.status(201).json(result);
 });
 
-export async function authenticate(req, res, next) {
-  const result = await authenticateToken(req.headers.authorization || '');
-  req.user = result.user;
-  req.authVersion = result.authVersion;
-  next();
-}
-
-export function requireAdmin(req, res, next) {
-  if (req.user.rol !== 'admin') {
-    throw httpError(403, 'Se requiere acceso administrador');
-  }
-
-  next();
-}
 
 authRouter.get('/cuenta', authenticate, async (req, res) => {
   const result = await getAccount(req.user.id);

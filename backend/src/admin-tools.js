@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { pool } from './db.js';
-import { authenticate, requireAdmin } from './controllers/authController.js';
+import { authenticate, requireAdmin } from './middlewares/auth.middleware.js';
 import { httpError, parseId } from './validation.js';
 
 export const toolsRouter = Router();
