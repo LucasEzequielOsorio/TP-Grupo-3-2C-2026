@@ -8,7 +8,7 @@ import { imageRouter, imagesDirectory } from './images.js';
 import { toolsRouter } from './admin-tools.js';
 import { transfersRouter } from './transfers.js';
 import { summaryRouter } from './location-summary.js';
-import { cartRouter } from './cart.js';
+import { cartRouter } from './controllers/cart.controller.js';
 import { ordersRouter } from './orders.js';
 
 export const app = express();
