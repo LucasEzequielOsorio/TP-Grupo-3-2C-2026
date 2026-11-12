@@ -6,10 +6,11 @@ import { productsRouter, adminRouter } from './controllers/products.controller.j
 import { pool } from './db.js';
 import { imageRouter, imagesDirectory } from './controllers/images.controller.js';
 import { toolsRouter } from './controllers/admin-tools.controller.js';
-import { transfersRouter } from './transfers.js';
-import { summaryRouter } from './location-summary.js';
+import { locationsRouter } from './controllers/locations.controller.js';
+import { transfersRouter } from './controllers/transfers.controller.js';
+import { summaryRouter } from './controllers/location-summary.controller.js';
 import { cartRouter } from './controllers/cart.controller.js';
-import { ordersRouter } from './orders.js';
+import { ordersRouter } from './controllers/orders.controller.js';
 
 export const app = express();
 app.disable('x-powered-by');
@@ -34,6 +35,7 @@ app.use(
 );
 app.use('/api/admin', imageRouter);
 app.use('/api/admin', toolsRouter);
+app.use('/api/admin', locationsRouter);
 app.use('/api/admin', transfersRouter);
 app.use('/api/admin', summaryRouter);
 app.use('/api/admin', adminRouter);
