@@ -94,16 +94,13 @@
         <a class="shop-button" routerLink="/tienda/productos">Seguir comprando →</a>
         @if (revisando()) {
           <section class="order-review" aria-label="Confirmar pedido">
-            <h3>¿Confirmás tu pedido?</h3>
+            <h3>Revisá tu pedido</h3>
             <p>
               Dirección de entrega: <strong>{{ direccion() }}</strong>
             </p>
-            <p>
-              Se descontarán las prendas del stock. Esta confirmación no realiza ningún cobro
-              online.
-            </p>
+            <p>Reservaremos las prendas por 30 minutos. Después podrás pagar con Mercado Pago.</p>
             <button class="shop-button dark" (click)="confirmar()" [disabled]="ocupado()">
-              {{ ocupado() ? 'Confirmando…' : 'Confirmar pedido' }}
+              {{ ocupado() ? 'Reservando…' : 'Reservar y continuar al pago' }}
             </button>
             <button class="shop-button" (click)="revisando.set(false)" [disabled]="ocupado()">
               Volver al carrito
@@ -115,10 +112,10 @@
             (click)="abrirConfirmacion()"
             [disabled]="ocupado() || cambiosStock()"
           >
-            Revisar y confirmar pedido
+            Revisar pedido y pagar
           </button>
         }
-        <small>La confirmación guarda tu pedido. No se realizan pagos online.</small>
+        <small>El pedido se confirma cuando el pago es aprobado y verificado.</small>
       </aside>
     </div>
   } @else if (!error()) {

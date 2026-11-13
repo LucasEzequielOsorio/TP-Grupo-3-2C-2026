@@ -12,14 +12,15 @@ const listQuery = `SELECT p.*, c.nombre AS clasificacion,
     JOIN existencias e ON e.variante_id = v.id
     JOIN ubicaciones u ON u.id = e.ubicacion_id
     WHERE v.producto_id = p.id AND v.activo = 1 AND u.activo = 1), 0) AS stock,
+  COALESCE((SELECT SUM(e.cantidad-e.reservada) FROM variantes_producto v JOIN existencias e ON e.variante_id=v.id JOIN ubicaciones u ON u.id=e.ubicacion_id WHERE v.producto_id=p.id AND v.activo=1 AND u.activo=1),0) AS stock_disponible,
   (SELECT COUNT(*) FROM variantes_producto v WHERE v.producto_id = p.id) AS cantidad_variantes
   FROM productos p JOIN categorias c ON c.id = p.categoria_id`;
-function normalize(p) {
+function normalize(p, admin = false) {
   return {
     ...p,
     imagen_url: p.imagen_url || '',
     activo: Boolean(p.activo),
-    stock: Number(p.stock),
+    stock: Number(admin ? p.stock : p.stock_disponible),
     cantidad_variantes: Number(p.cantidad_variantes),
   };
 }
@@ -46,7 +47,7 @@ export async function getProduct(id, admin = false, db = pool) {
     [id],
   );
   return {
-    ...normalize(rows[0]),
+    ...normalize(rows[0], admin),
     imagenes: images.map((i) => i.url),
     fotos: images,
     variantes: variants.map((v) => ({
@@ -54,13 +55,17 @@ export async function getProduct(id, admin = false, db = pool) {
       activo: Boolean(v.activo),
       existencias: stock
         .filter((e) => e.variante_id === v.id)
-        .map((e) => ({ ubicacion_id: e.ubicacion_id, cantidad: e.cantidad })),
+        .map((e) => ({
+          ubicacion_id: e.ubicacion_id,
+          cantidad: admin ? e.cantidad : e.cantidad - e.reservada,
+          reservada: e.reservada,
+        })),
     })),
   };
 }
 productsRouter.get('/', async (req, res) => {
   const [rows] = await pool.execute(`${listQuery} WHERE p.activo = 1 ORDER BY p.id DESC`);
-  res.json(rows.map(normalize));
+  res.json(rows.map((p) => normalize(p)));
 });
 productsRouter.get('/:id', async (req, res) => res.json(await getProduct(parseId(req.params.id))));
 adminRouter.get('/catalogos', async (req, res) => {
@@ -74,7 +79,7 @@ adminRouter.get('/catalogos', async (req, res) => {
 });
 adminRouter.get('/productos', async (req, res) => {
   const [rows] = await pool.execute(`${listQuery} ORDER BY p.id DESC`);
-  res.json(rows.map(normalize));
+  res.json(rows.map((p) => normalize(p, true)));
 });
 adminRouter.get('/productos/:id', async (req, res) =>
   res.json(await getProduct(parseId(req.params.id), true)),
@@ -186,6 +191,11 @@ export async function saveProduct(id, input, userId) {
       );
       for (const e of [...v.existencias].sort((a, b) => a.ubicacion_id - b.ubicacion_id)) {
         const previous = current.find((c) => c.ubicacion_id === e.ubicacion_id);
+        if (e.cantidad < (previous?.reservada || 0))
+          throw httpError(
+            409,
+            'No podés reducir el stock por debajo de las unidades reservadas para pagos.',
+          );
         const difference = e.cantidad - (previous?.cantidad || 0);
         if (difference && !isNew) {
           const adjustment = data.ajuste_stock;

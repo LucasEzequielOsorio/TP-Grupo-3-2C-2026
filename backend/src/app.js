@@ -10,9 +10,15 @@ import { transfersRouter } from './transfers.js';
 import { summaryRouter } from './location-summary.js';
 import { cartRouter } from './cart.js';
 import { ordersRouter } from './orders.js';
+import { recoveryRouter } from './recovery.js';
+import { existsSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { paymentService } from './payments.js';
 
 export const app = express();
 app.disable('x-powered-by');
+// El túnel llega por loopback; conserva la IP de origen para los límites de intentos.
+if(process.env.SERVE_FRONTEND==='true')app.set('trust proxy','loopback');
 app.use(helmet());
 app.use(express.json({ limit: '256kb' }));
 app.get('/api/health', async (req, res) => {
@@ -20,10 +26,14 @@ app.get('/api/health', async (req, res) => {
   res.json({ estado: 'ok' });
 });
 app.use('/api/auth', authRouter);
+app.use('/api/auth', recoveryRouter);
 app.get('/api/auth/me', authenticate, (req, res) => res.json({ usuario: req.user }));
 app.use('/api/productos', productsRouter);
 app.use('/api/carrito', cartRouter);
 app.use('/api/pedidos', ordersRouter);
+app.use('/api/pedidos', paymentService.router);
+app.use('/api/pagos/mercadopago/webhook', paymentService.webhook);
+app.use('/api/admin', paymentService.admin);
 app.use(
   '/api/imagenes',
   express.static(imagesDirectory, {
@@ -38,6 +48,25 @@ app.use('/api/admin', toolsRouter);
 app.use('/api/admin', transfersRouter);
 app.use('/api/admin', summaryRouter);
 app.use('/api/admin', adminRouter);
+if (process.env.SERVE_FRONTEND === 'true') {
+  const frontend = fileURLToPath(
+    new URL('../../dist/TP-Grupo-3-2C-2026/browser/', import.meta.url),
+  );
+  const index = frontend + 'index.html';
+  if (!existsSync(index))
+    throw new Error('Compilar Angular con npm run build antes de iniciar preview');
+  app.use(express.static(frontend, { dotfiles: 'deny', index: false }));
+  app.get('/{*path}', (req, res, next) => {
+    if (
+      req.path === '/api' ||
+      req.path.startsWith('/api/') ||
+      req.path.split('/').some((p) => p.startsWith('.'))
+    )
+      return next();
+    res.set('Cache-Control', 'no-store');
+    res.sendFile(index);
+  });
+}
 app.use((req, res) => res.status(404).json({ mensaje: 'Ruta no encontrada' }));
 app.use((error, req, res, next) => {
   if (error instanceof ZodError)

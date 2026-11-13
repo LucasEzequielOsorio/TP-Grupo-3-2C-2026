@@ -1,0 +1,58 @@
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 22px 0;
+}
+label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #4b6345;
+}
+input {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #dce3d4;
+  border-radius: 6px;
+  padding: 13px 12px;
+  color: #324a31;
+  font: inherit;
+  background: white;
+}
+button,
+.primary-link {
+  display: block;
+  border: 0;
+  background: #294b3a;
+  color: white;
+  border-radius: 7px;
+  padding: 14px;
+  font: inherit;
+  font-size: 13px;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.error {
+  background: #fff0e9;
+  color: #933f28;
+  padding: 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.hint {
+  font-size: 11px;
+  line-height: 1.6;
+  color: #63725b;
+  margin: 0;
+}
+input:focus-visible,
+button:focus-visible {
+  outline: 2px solid #9bb78a;
+  outline-offset: 2px;
+}

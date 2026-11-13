@@ -92,10 +92,10 @@ transfersRouter.get('/ubicaciones/:id/stock', async (req, res) => {
   ]);
   if (!locations.length) throw httpError(404, 'Ubicación no encontrada o inactiva');
   const [rows] = await pool.execute(
-    `SELECT v.id AS variante_id,p.id AS producto_id,p.nombre AS producto,v.sku,t.nombre AS talle,c.nombre AS color,e.cantidad
+    `SELECT v.id AS variante_id,p.id AS producto_id,p.nombre AS producto,v.sku,t.nombre AS talle,c.nombre AS color,(e.cantidad-e.reservada) AS cantidad
     FROM existencias e JOIN variantes_producto v ON v.id=e.variante_id JOIN productos p ON p.id=v.producto_id
     JOIN talles t ON t.id=v.talle_id JOIN colores c ON c.id=v.color_id
-    WHERE e.ubicacion_id=? AND e.cantidad>0 AND v.activo=1 AND p.activo=1 ORDER BY p.nombre,v.id`,
+    WHERE e.ubicacion_id=? AND e.cantidad-e.reservada>0 AND v.activo=1 AND p.activo=1 ORDER BY p.nombre,v.id`,
     [id],
   );
   res.json(rows);
@@ -184,7 +184,11 @@ transfersRouter.post('/transferencias', async (req, res) => {
     for (const item of data.items)
       if (
         (stock.find((s) => s.variante_id === item.variante_id && s.ubicacion_id === data.origen_id)
-          ?.cantidad || 0) < item.cantidad
+          ?.cantidad || 0) -
+          (stock.find(
+            (s) => s.variante_id === item.variante_id && s.ubicacion_id === data.origen_id,
+          )?.reservada || 0) <
+        item.cantidad
       )
         throw httpError(409, 'Stock insuficiente en el origen. Actualizá las cantidades.');
     const [created] = await db.execute(
@@ -235,7 +239,10 @@ transfersRouter.post('/transferencias/:id/:accion', async (req, res) => {
       const previous = stock.find(
         (s) => s.variante_id === item.variante_id && s.ubicacion_id === location,
       );
-      if (action === 'despachar' && (!previous || previous.cantidad < item.cantidad))
+      if (
+        action === 'despachar' &&
+        (!previous || previous.cantidad - previous.reservada < item.cantidad)
+      )
         throw httpError(
           409,
           `Stock insuficiente para una variante. No se despachó ninguna unidad.`,

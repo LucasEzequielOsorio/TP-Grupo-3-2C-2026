@@ -20,6 +20,8 @@ export interface LineaCarrito {
 export interface PedidoResumen {
   id: number;
   estado: string;
+  pago_estado?: string;
+  reserva_hasta?: string | null;
   creado_en: string;
   total: number;
   unidades: number;
@@ -43,6 +45,25 @@ export interface CarritoRespuesta {
 }
 @Service()
 export class TiendaService {
+  iniciarPago(id: number) {
+    return this.http.post<{ checkout_url: string }>(
+      '/api/pedidos/' + id + '/pagar',
+      {},
+      this.options,
+    );
+  }
+  sincronizarPago(id: number) {
+    return this.http.post<PedidoDetalle>('/api/pedidos/' + id + '/sincronizar', {}, this.options);
+  }
+  cancelarPedido(id: number) {
+    return this.http.post<PedidoDetalle>('/api/pedidos/' + id + '/cancelar', {}, this.options);
+  }
+  pagosRevision() {
+    return this.http.get<{ id: number; email: string; pago_estado: string; total: number }[]>(
+      '/api/admin/pagos-revision',
+      this.options,
+    );
+  }
   getPedidos() {
     return this.http.get<PedidoResumen[]>('/api/pedidos', this.options);
   }

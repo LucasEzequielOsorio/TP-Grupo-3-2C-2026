@@ -31,6 +31,7 @@
         (submit)="iniciarSesion($event)"
         [sent]="waitingForResponse()"
       ></app-formulario-usuario>
+      <p class="signup-link"><a routerLink="/bienvenido/recuperar">Olvidé mi contraseña</a></p>
       <p class="signup-link">
         ¿Todavía no tenés cuenta?
         <a routerLink="/bienvenido/signup" [queryParams]="{ returnUrl: retorno }">Registrate</a>
