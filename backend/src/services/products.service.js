@@ -19,18 +19,18 @@ import {
 } from '../repositories/products.repository.js';
 import { httpError } from '../validation.js';
 
-function normalize(product) {
+function normalize(product, admin = false) {
   return {
     ...product,
     imagen_url: product.imagen_url || '',
     activo: Boolean(product.activo),
-    stock: Number(product.stock),
+    stock: Number(admin ? product.stock : product.stock_disponible),
     cantidad_variantes: Number(product.cantidad_variantes),
   };
 }
 
 export async function listProducts(admin = false, db = pool) {
-  return (await findProducts({ admin, db })).map(normalize);
+  return (await findProducts({ admin, db })).map((p) =>normalize(p, admin));
 }
 
 export async function getProduct(id, admin = false, db = pool) {
@@ -39,7 +39,7 @@ export async function getProduct(id, admin = false, db = pool) {
 
   const { product, images, variants, stock } = result;
   return {
-    ...normalize(product),
+    ...normalize(product, admin),
     imagenes: images.map((image) => image.url),
     fotos: images,
     variantes: variants.map((variant) => ({
@@ -47,7 +47,7 @@ export async function getProduct(id, admin = false, db = pool) {
       activo: Boolean(variant.activo),
       existencias: stock
         .filter((entry) => entry.variante_id === variant.id)
-        .map((entry) => ({ ubicacion_id: entry.ubicacion_id, cantidad: entry.cantidad })),
+        .map((entry) => ({ ubicacion_id: entry.ubicacion_id, cantidad: entry.cantidad, reservada: entry.reservada })),
     })),
   };
 }
@@ -152,6 +152,11 @@ export async function saveProduct(id, { data, images, photos }, userId) {
         (a, b) => a.ubicacion_id - b.ubicacion_id,
       )) {
         const previous = currentStock.find((item) => item.ubicacion_id === entry.ubicacion_id);
+        if (entry.cantidad < (previous?.reservada || 0))
+          throw httpError(
+            409,
+            'No podés reducir el stock por debajo de las unidades reservadas para pagos.',
+          );
         const difference = entry.cantidad - (previous?.cantidad || 0);
         if (difference && !isNew) {
           const adjustment = data.ajuste_stock;

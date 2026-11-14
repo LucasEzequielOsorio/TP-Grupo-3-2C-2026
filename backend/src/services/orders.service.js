@@ -13,16 +13,17 @@ import {
   findProductsForUpdate,
   findStockForUpdate,
   findVariantsForUpdate,
+  findPendingOrdersByUser,
   incrementOrderProductVersions,
   insertOrderConfirmation,
   insertOrderItemDetails,
-  insertOrderStockMovement,
   lockOrderUser,
-  updateOrderStock,
+  updateReservedStock,
+  insertReservedStockMovement
 } from '../repositories/orders.repository.js';
 import { httpError } from '../validation.js';
 
-async function getOrderDetail(userId, orderId, db = pool) {
+export async function getOrderDetail(userId, orderId, db = pool) {
   const order = await findOrderByUser(orderId, userId, db);
   if (!order) throw httpError(404, 'Pedido no encontrado');
 
@@ -59,6 +60,9 @@ export async function createOrder(userId, data) {
 
     const confirmed = await findConfirmedOrder(db, userId, data.clave);
     if (confirmed) return getOrderDetail(userId, confirmed.pedido_id, db);
+
+    const [pending] = await findPendingOrdersByUser(userId, db);
+    if(pending.total >= 3) throw httpError(409, 'Tenés 3 pedidos pendientes. Esperá a que se procesen antes de crear otro');
 
     const cart = await findCartItemsForOrder(db, userId);
     if (!cart.length) throw httpError(409, 'El carrito está vacío');
@@ -102,6 +106,14 @@ export async function createOrder(userId, data) {
         );
     }
 
+    const totalCents = cart.reduce(
+      (sum, i) =>
+        sum + Math.round(products.find((p) => p.id === i.producto_id).precio * 100) * i.cantidad,
+      0,
+    );
+    if (totalCents > 9999999999)
+      throw httpError(400, 'El total del pedido supera el importe máximo permitido.');
+
     const orderId = await createOrderRecord(db, userId, address);
 
     for (const item of cart) {
@@ -112,11 +124,10 @@ export async function createOrder(userId, data) {
 
       let remaining = item.cantidad;
       for (const entry of stock.filter((stockItem) => stockItem.variante_id === variant.id)) {
-        const quantity = Math.min(remaining, entry.cantidad);
+        const quantity = Math.min(remaining, entry.cantidad - entry.reservada);
         if (!quantity) continue;
-
-        await updateOrderStock(db, variant.id, entry.ubicacion_id, quantity);
-        await insertOrderStockMovement(db, variant.id, entry.ubicacion_id, quantity, userId, orderId);
+        await updateReservedStock(db, variant.id, entry.ubicacion_id, quantity);
+        await insertReservedStockMovement(db, variant.id, entry.ubicacion_id, quantity, orderId);
         remaining -= quantity;
         if (!remaining) break;
       }

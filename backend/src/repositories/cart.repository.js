@@ -5,7 +5,7 @@ export async function getCartRowsByUser(userId, db = pool) {
     `SELECT ci.variante_id, ci.cantidad, v.producto_id,
     t.nombre AS talle, c.nombre AS color, p.nombre, p.precio,
     (p.activo AND v.activo) AS activo,
-    COALESCE((SELECT SUM(e.cantidad) FROM existencias e JOIN ubicaciones u ON u.id=e.ubicacion_id
+    COALESCE((SELECT SUM(e.cantidad-e.reservada) FROM existencias e JOIN ubicaciones u ON u.id=e.ubicacion_id
       WHERE e.variante_id=v.id AND u.activo=1),0) AS stock,
     COALESCE((SELECT i.url FROM producto_imagenes i WHERE i.producto_id=p.id
       AND (i.color_id=v.color_id OR i.color_id IS NULL)

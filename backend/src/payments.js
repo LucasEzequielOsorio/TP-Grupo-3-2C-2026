@@ -2,9 +2,9 @@ import { Router } from 'express';
 import { createHmac, timingSafeEqual, randomUUID } from 'node:crypto';
 import { rateLimit } from 'express-rate-limit';
 import { pool, transaction } from './db.js';
-import { authenticate, requireAdmin } from './auth.js';
+import { authenticate, requireAdmin } from './middlewares/auth.middleware.js';
 import { httpError, parseId } from './validation.js';
-import { detail } from './orders.js';
+import { getOrderDetail } from './services/orders.service.js';
 import { finishReservation } from './reservations.js';
 import { mercadoPago, checkoutUrl } from './mercadopago.js';
 
@@ -221,7 +221,7 @@ export function createPaymentService(provider = mercadoPago) {
       );
     }
     try {
-      const order = await detail(pool, req.user.id, id);
+      const order = await getOrderDetail(req.user.id, id, pool);
       const pref = await provider.createPreference(
         state.order,
         order.items,
@@ -238,13 +238,13 @@ export function createPaymentService(provider = mercadoPago) {
   });
   router.post('/:id/sincronizar', async (req, res) => {
     const id = parseId(req.params.id);
-    const order = await detail(pool, req.user.id, id);
+    const order = await getOrderDetail(req.user.id, id, pool);
     await syncOrder(order.id);
-    res.json(await detail(pool, req.user.id, id));
+    res.json(await getOrderDetail(req.user.id, id, pool));
   });
   router.post('/:id/cancelar', async (req, res) => {
     const id = parseId(req.params.id);
-    const own = await detail(pool, req.user.id, id);
+    const own = await getOrderDetail(req.user.id, id, pool);
     const [[checkout]] = await pool.execute(
       'SELECT pedido_id FROM checkout_pedidos WHERE pedido_id=?',
       [id],
@@ -263,7 +263,7 @@ export function createPaymentService(provider = mercadoPago) {
         o.id,
       ]);
     });
-    res.json(await detail(pool, req.user.id, id));
+    res.json(await getOrderDetail(req.user.id, id, pool));
   });
   webhook.post('/', async (req, res) => {
     if (!validSignature(req, provider.secret)) throw httpError(401, 'Notificación no autorizada');

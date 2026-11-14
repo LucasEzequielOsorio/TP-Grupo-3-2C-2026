@@ -5,6 +5,7 @@ const listQuery = `SELECT p.*, c.nombre AS clasificacion,
     JOIN existencias e ON e.variante_id = v.id
     JOIN ubicaciones u ON u.id = e.ubicacion_id
     WHERE v.producto_id = p.id AND v.activo = 1 AND u.activo = 1), 0) AS stock,
+    COALESCE((SELECT SUM(e.cantidad-e.reservada) FROM variantes_producto v JOIN existencias e ON e.variante_id=v.id JOIN ubicaciones u ON u.id=e.ubicacion_id WHERE v.producto_id=p.id AND v.activo=1 AND u.activo=1),0) AS stock_disponible,
   (SELECT COUNT(*) FROM variantes_producto v WHERE v.producto_id = p.id) AS cantidad_variantes
   FROM productos p JOIN categorias c ON c.id = p.categoria_id`;
 

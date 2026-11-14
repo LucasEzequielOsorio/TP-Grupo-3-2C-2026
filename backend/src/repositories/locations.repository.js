@@ -51,10 +51,10 @@ export async function findActiveLocation(id, db = pool) {
 
 export async function findLocationStock(id, db = pool) {
   const [rows] = await db.execute(
-    `SELECT v.id AS variante_id,p.id AS producto_id,p.nombre AS producto,v.sku,t.nombre AS talle,c.nombre AS color,e.cantidad
+    `SELECT v.id AS variante_id,p.id AS producto_id,p.nombre AS producto,v.sku,t.nombre AS talle,c.nombre AS color,(e.cantidad - e.reservada) AS cantidad
     FROM existencias e JOIN variantes_producto v ON v.id=e.variante_id JOIN productos p ON p.id=v.producto_id
     JOIN talles t ON t.id=v.talle_id JOIN colores c ON c.id=v.color_id
-    WHERE e.ubicacion_id=? AND e.cantidad>0 AND v.activo=1 AND p.activo=1 ORDER BY p.nombre,v.id`,
+    WHERE e.ubicacion_id=? AND e.cantidad-e.reservada>0 AND v.activo=1 AND p.activo=1 ORDER BY p.nombre,v.id`,
     [id],
   );
   return rows;

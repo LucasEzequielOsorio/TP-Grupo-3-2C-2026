@@ -55,7 +55,11 @@ export async function createTransfer(data, userId) {
         (resources.stock.find(
           (entry) =>
             entry.variante_id === item.variante_id && entry.ubicacion_id === data.origen_id,
-        )?.cantidad || 0) < item.cantidad
+        )?.cantidad || 0) -
+        (resources.stock.find(
+          (entry) =>
+            entry.variante_id === item.variante_id && entry.ubicacion_id === data.origen_id,
+        )?.reservada || 0) < item.cantidad
       )
         throw httpError(409, 'Stock insuficiente en el origen. Actualizá las cantidades.');
 
@@ -100,7 +104,7 @@ export async function executeTransferAction(id, action, userId) {
         (entry) =>
           entry.variante_id === item.variante_id && entry.ubicacion_id === locationId,
       );
-      if (action === 'despachar' && (!previous || previous.cantidad < item.cantidad))
+      if (action === 'despachar' && (!previous || previous.cantidad - previous.reservada < item.cantidad))
         throw httpError(
           409,
           'Stock insuficiente para una variante. No se despachó ninguna unidad.',

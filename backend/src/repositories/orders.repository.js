@@ -25,7 +25,7 @@ export async function findOrderItems(db, orderId) {
 
 export async function findOrdersByUser(userId, db = pool) {
   const [rows] = await db.execute(
-    'SELECT p.id,p.estado,p.creado_en,SUM(i.cantidad) AS unidades,SUM(i.cantidad*i.precio_unitario) AS total FROM pedidos p JOIN pedido_items i ON i.pedido_id=p.id WHERE p.usuario_id=? GROUP BY p.id ORDER BY p.id DESC LIMIT 100',
+    'SELECT p.id,p.estado,p.pago_estado,p.reserva_hasta,p.creado_en,SUM(i.cantidad) AS unidades,SUM(i.cantidad*i.precio_unitario) AS total FROM pedidos p JOIN pedido_items i ON i.pedido_id=p.id WHERE p.usuario_id=? GROUP BY p.id ORDER BY p.id DESC LIMIT 100',
     [userId],
   );
   return rows;
@@ -45,6 +45,15 @@ export async function findConfirmedOrder(db, userId, key) {
   );
   return rows[0] ?? null;
 }
+
+export async function findPendingOrdersByUser(userId, db = pool) {
+  const [rows] = await db.execute(
+    "SELECT COUNT(*) AS total FROM pedidos WHERE usuario_id=? AND estado='pendiente' AND reserva_hasta>UTC_TIMESTAMP()",
+      [userId]
+  );
+  return rows;
+}
+
 
 export async function findCartItemsForOrder(db, userId) {
   const [rows] = await db.execute(
@@ -95,7 +104,7 @@ export async function findStockForUpdate(db, variantIds, locationIds) {
 
 export async function createOrderRecord(db, userId, address) {
   const [created] = await db.execute(
-    "INSERT INTO pedidos(usuario_id,estado,direccion_entrega) VALUES (?,'confirmado',?)",
+    "INSERT INTO pedidos(usuario_id,estado,direccion_entrega,pago_estado,reserva_hasta) VALUES (?,'pendiente',?,'pendiente',UTC_TIMESTAMP()+INTERVAL 30 MINUTE)",
     [userId, address],
   );
   return created.insertId;
@@ -118,10 +127,29 @@ export async function insertOrderItemDetails(db, itemId, name, size, color) {
   ]);
 }
 
+export async function updateReservedStock(db, variantId, locationId, quantity) {
+  await db.execute(
+    'UPDATE existencias SET reservada=reservada+? WHERE variante_id=? AND ubicacion_id=?',
+    [quantity, variantId, locationId],
+  );
+}
 export async function updateOrderStock(db, variantId, locationId, quantity) {
   await db.execute(
     'UPDATE existencias SET cantidad=cantidad-? WHERE variante_id=? AND ubicacion_id=?',
     [quantity, variantId, locationId],
+  );
+}
+
+export async function insertReservedStockMovement(
+  db,
+  variantId,
+  locationId,
+  quantity,
+  orderId,
+) {
+  await db.execute(
+    "INSERT INTO reservas_pedido(pedido_id,variante_id,ubicacion_id,cantidad) VALUES (?,?,?,?)",
+    [orderId, variantId, locationId, quantity],
   );
 }
 
