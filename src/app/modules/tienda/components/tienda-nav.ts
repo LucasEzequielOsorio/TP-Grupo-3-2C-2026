@@ -112,6 +112,10 @@ export class TiendaNav {
   auth = inject(UsuarioService);
   private router = inject(Router);
   salir() {
+    if (this.router.url === '/tienda/productos') {
+      this.auth.logout();
+      return;
+    }
     const token = localStorage.getItem('auth_token');
     const role = localStorage.getItem('user_role');
     this.auth.logout();

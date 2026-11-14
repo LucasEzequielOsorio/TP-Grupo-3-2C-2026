@@ -14,6 +14,7 @@ export interface Catalogos {
   ubicaciones: Opcion[];
 }
 export interface Existencia {
+  reservada?: number;
   ubicacion_id: number;
   cantidad: number;
 }

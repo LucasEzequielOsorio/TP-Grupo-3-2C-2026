@@ -38,6 +38,9 @@ Cambiar o quitar una imagen actualiza el producto al guardar. No borra archivos 
 | GET | /api/health | Público |
 | POST | /api/auth/registro | Público, siempre crea cliente |
 | POST | /api/auth/login | Público |
+| POST | /api/auth/recuperar | Público, respuesta neutra y límite de solicitudes |
+| POST | /api/auth/verificar-recuperacion | Comprueba vigencia del token sin consumirlo |
+| POST | /api/auth/restablecer | Público, requiere enlace válido de un solo uso |
 | GET | /api/auth/me | Sesión válida |
 | GET | /api/auth/cuenta | Datos personales propios, cliente o admin |
 | PUT | /api/auth/cuenta | Edición de la cuenta autenticada |
@@ -57,7 +60,7 @@ Un producto enviado al API incluye `nombre`, `descripcion`, `categoria_id`, `pre
 
 `npm --prefix backend test` prueba el API con la MySQL local: credenciales, permisos 401/403, rol del registro, email único, rechazo de datos inválidos, alta, ajuste con movimientos, rechazo de ediciones obsoletas, rollback ante SKU duplicado y ocultamiento de inactivos. Crea registros TEST-UUID y limpia solo esos registros al terminar. No ejecutar contra una base de producción. `npm run build` verifica Angular.
 
-El panel incluye alta y edición, búsqueda, filtro por estado, resumen de existencias y cantidades por ubicación. El carrito, la confirmación de pedidos y Mi cuenta están integrados con MySQL. Los pagos online siguen pendientes. El stock mostrado es físico de ubicaciones activas; no implementa reservas de compra.
+El panel incluye alta y edición, búsqueda, filtro por estado, resumen de existencias y cantidades por ubicación. El carrito, los pedidos, Mi cuenta y las reservas están integrados con MySQL. Checkout Pro está preparado para pruebas, pendiente de credenciales y HTTPS. Administración conserva stock físico y la tienda muestra disponibilidad descontando reservas.
 
 ## Depósitos, tiendas y transferencias
 
@@ -88,7 +91,7 @@ Desde `/admin/transferencias` se eligen origen, destino y variantes con stock di
 
 Cada operación usa una transacción y bloquea los recursos en un orden estable. Dos despachos simultáneos no pueden gastar las mismas unidades; confirmar dos veces no duplica descuentos ni ingresos (la segunda petición responde 409). Si falla un ítem, se revierte toda la operación. Despacho y recepción incrementan la versión de cada producto afectado, para rechazar formularios viejos que intentarían sobrescribir el nuevo stock.
 
-Si una prenda se desactiva después del despacho, se permite recibirla para que la mercadería no quede varada. El usuario que confirma cada paso se conserva en sus movimientos. Las unidades en tránsito no se incluyen en el stock físico de la tienda. La tienda sigue sumando todas las ubicaciones activas; las reglas de abastecimiento online y las reservas de pedidos son futuras integraciones.
+Si una prenda se desactiva después del despacho, se permite recibirla para que la mercadería no quede varada. El usuario que confirma cada paso se conserva en sus movimientos. Las unidades en tránsito no se incluyen en el stock disponible de la tienda. Las reservas de pedidos se excluyen de las cantidades que se pueden despachar.
 
 API (solo administrador):
 
@@ -181,7 +184,7 @@ JOIN ubicaciones u ON u.id = e.ubicacion_id
 ORDER BY p.id, v.id;
 ```
 
-Para una instalación MySQL 8.4 sin Docker, crear una base UTF-8 y ejecutar `001-schema.sql`, `002-seed.sql`, `003-admin-mejoras.sql`, `004-carrito.sql` y `005-pedidos.sql` en ese orden sobre esa base. No ejecutar el seed sobre datos existentes.
+Para una instalación MySQL 8.4 sin Docker, crear una base UTF-8 y ejecutar los scripts SQL numerados del 001 al 007 en orden sobre esa base. No ejecutar el seed sobre datos existentes.
 
 ## Carrito y detalle del pedido
 
@@ -205,9 +208,9 @@ Ejecutar `node backend/scripts/migrate.js` desde la raíz para agregar las tabla
 - `GET /api/pedidos`: últimos 100 pedidos propios, del más reciente al más antiguo.
 - `GET /api/pedidos/:id`: detalle propio con precios y datos históricos; un pedido ajeno responde 404.
 
-La confirmación bloquea usuario, productos, variantes, ubicaciones y existencias en orden estable. Valida carrito, precios, estado activo y stock; guarda pedido e ítems, descuenta existencias, registra movimientos de venta, incrementa versiones de productos y vacía el carrito dentro de una transacción. Si cambia un precio o falta stock, responde 409 sin confirmar parcialmente. Reintentar la misma clave devuelve el mismo pedido, incluso si se perdió la primera respuesta.
+Crear un pedido bloquea usuario, productos, variantes, ubicaciones y existencias en orden estable. Valida carrito, precios, estado activo y disponibilidad; guarda pedido e ítems, reserva stock, incrementa versiones y vacía el carrito dentro de una transacción. Todavía no registra una venta ni descuenta stock físico. La baja y los movimientos se realizan al verificar un pago aprobado. Si cambia un precio o falta stock, responde 409 sin confirmar parcialmente. Reintentar la misma clave devuelve el mismo pedido, incluso si se perdió la primera respuesta.
 
-Abastecimiento básico: descuenta de las ubicaciones activas en orden de id y puede repartir una prenda entre varias ubicaciones. Las unidades en tránsito no se venden. La dirección es la registrada en la cuenta al confirmar. No se implementan cobros online, cancelación ni gestión de envíos.
+Abastecimiento básico: reserva en ubicaciones activas por orden de id y puede repartir una prenda entre varias ubicaciones. Las unidades en tránsito no se venden. La dirección es la registrada al crear el pedido. Mercado Pago se integra en modo de pruebas; no se implementan gestión de envíos ni devoluciones de dinero automáticas.
 
 Pruebas: `node --test backend/test/orders.test.js`, con datos temporales propios y limpieza al finalizar.
 
@@ -222,3 +225,85 @@ Ejecutar node backend/scripts/migrate.js en bases existentes para agregar usuari
 Las modificaciones de dirección se aplican a los pedidos futuros. Los pedidos confirmados conservan su dirección y datos históricos. La pantalla avisa antes de descartar cambios y permite mostrar u ocultar cada campo de contraseña.
 
 Pruebas: node --test backend/test/account.test.js (cuentas temporales de ambos roles).
+
+## Recuperación de contraseña
+
+Preparación desde la raíz:
+
+1. Instalar dependencias: npm --prefix backend ci.
+2. Iniciar servicios locales: docker compose up -d mysql mailpit.
+3. Aplicar la migración idempotente: node backend/scripts/migrate.js.
+4. Iniciar API y Angular. El worker de correos se inicia junto con backend/src/server.js.
+5. En el login seleccionar “Olvidé mi contraseña”, ingresar el email y abrir el correo en http://127.0.0.1:8025. Mailpit captura el SMTP en 127.0.0.1:1025 y no entrega correos a Internet. No requiere credenciales reales.
+
+Configuración documentada en .env.example: APP_URL es el origen fijo de la tienda, sin rutas ni query; nunca se obtiene del encabezado Host de una solicitud. El valor local es http://127.0.0.1:4200. Los enlaces usan ese origen incluso si el visitante entró por localhost. Para producción definir NODE_ENV=production, APP_URL HTTPS, SMTP_HOST remoto, SMTP_PORT (587 con STARTTLS requerido o 465 con TLS), SMTP_USER, SMTP_PASSWORD y MAIL_FROM autorizado por el proveedor. No se desactiva la verificación de certificados. La aplicación rechaza la configuración local si NODE_ENV es production. Mailpit es exclusivamente para pruebas locales y sus puertos se publican solo en loopback. En varias instancias, compartir también el almacenamiento de los límites por IP; el limitador actual corresponde a una API local.
+
+POST /api/auth/recuperar recibe {email} y devuelve 202 con el mismo mensaje para cuentas existentes, inexistentes, desactivadas o limitadas por cuenta. No devuelve tokens ni espera al SMTP. Límite por IP: 5 solicitudes cada 15 minutos. Por cuenta: máximo 3 por hora y una por minuto, sin revelar estos contadores al visitante. Se conserva el acceso normal a la cuenta mientras se solicita la recuperación.
+
+POST /api/auth/restablecer recibe {token,password}. El token aleatorio tiene 256 bits y vence 15 minutos después de su emisión. MySQL conserva solo SHA-256 del token, junto con email y versión de autenticación. Un nuevo correo de recuperación invalida el enlace anterior al emitirse. Cambiar email o contraseña invalida los enlaces pendientes por versión. El enlace usa un fragmento URL; Angular lo retira de la barra al cargar y lo conserva solo en memoria. Recargar esa pantalla requiere volver a abrir el enlace del correo. La página aplica no-referrer y las respuestas de recuperación no-store.
+
+Al abrir la pantalla, POST /api/auth/verificar-recuperacion con {token} comprueba existencia, vencimiento, estado activo y coincidencia de email y versión. Hasta recibir la respuesta se ocultan los campos. Un enlace consumido o vencido muestra el aviso y la opción de solicitar otro. La comprobación tiene límite de 40 intentos por IP cada 15 minutos y no modifica el token. El enlace se consume únicamente al guardar correctamente la nueva contraseña; abrirlo o previsualizarlo en el correo no lo inutiliza. El guardado repite todas las comprobaciones bajo bloqueo para evitar carreras entre pestañas.
+
+Al guardar, se comprueba que el usuario siga activo, que email y versión coincidan y que el token no haya vencido. Se bloquean usuario y token, se guarda bcrypt con costo 12, se incrementa auth_version, se elimina el token y se encola el aviso por correo en una misma transacción. Dos consumos simultáneos no pueden cambiar dos veces la contraseña. Se aplica la complejidad del registro y un máximo de 72 bytes. No hay inicio de sesión automático; el usuario debe ingresar otra vez.
+
+La tabla correos_cuenta es una cola durable sin tokens en claro. El worker la consulta cada 3 segundos, reclama trabajos con SKIP LOCKED y libera los bloqueos antes de conectarse al SMTP. Reintenta hasta tres veces, con un minuto de espera, y recupera trabajos abandonados después de cinco minutos. Las solicitudes antiguas de recuperación (más de 15 minutos sin procesarse) se descartan. El envío es al menos una vez: un reinicio después de entregar podría repetir un email; solo el último enlace emitido sirve. Los trabajos agotados quedan como fallido; revisar estado e intentos, corregir SMTP y solicitar un enlace nuevo. Cada hora se limpian tokens vencidos y hasta 1000 trabajos de más de siete días. No se registran tokens, contraseñas, destinatarios ni errores completos del SMTP en consola.
+
+Pruebas: con MySQL iniciado y migrado, detener el backend que ejecuta el worker antes de correr npm --prefix backend test, para que no compita con la cola de los casos de integración. recovery.test.js crea y limpia su propia cuenta, verifica respuesta neutra, límites, hash, expiración, uso único concurrente, revocación de sesiones y reintentos fallidos. Angular prueba validación, repetición, bloqueo de doble envío y eliminación del token de la URL.
+
+Referencias: [OWASP Forgot Password Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Forgot_Password_Cheat_Sheet.html), [Nodemailer SMTP](https://nodemailer.com/smtp), [Mailpit Docker](https://mailpit.axllent.org/docs/install/docker/).
+
+## Mercado Pago Checkout Pro y reservas
+
+La integración usa Preferences API de Checkout Pro con redirección alojada en Mercado Pago. La aplicación no recibe datos de tarjetas. Está limitada al vendedor de prueba: comprueba la cuenta asociada al token. Si el pago devuelve live_mode=true, vuelve a consultar /users/me y exige que el vendedor coincida con MP_COLLECTOR_ID y tenga la etiqueta test_user antes de conciliarlo. El flujo de Checkout Pro con cuentas test puede devolver ese indicador; no basta para clasificar la cuenta. No inferir el entorno únicamente por el prefijo APP_USR del token; las cuentas de prueba también pueden usar ese prefijo.
+
+Este flujo con cuentas de vendedor y comprador de prueba redirige al `init_point` de la preferencia, no al `sandbox_init_point`. Los enlaces sandbox guardados anteriormente se recuperan consultando la misma preferencia al volver a pulsar Pagar; no se duplica el checkout. Probar en una ventana de incógnito con el comprador de prueba para evitar mezclar sesiones del vendedor o de una cuenta personal.
+
+### Configuración antes de probar
+
+1. Ejecutar node backend/scripts/migrate.js. Agrega existencias.reservada, los estados de pago, la fecha de reserva, el identificador de pago aceptado y las tablas de 007-pagos.sql. Conserva los pedidos anteriores como sin_pago; no vuelve a descontar su stock.
+2. Completar en .env MP_ACCESS_TOKEN (del vendedor de prueba), MP_WEBHOOK_SECRET (firma configurada en Webhooks), MP_COLLECTOR_ID (id del vendedor), MP_NOTIFICATION_URL y MP_BACK_URL. Las últimas dos deben ser HTTPS públicas; MP_NOTIFICATION_URL termina en /api/pagos/mercadopago/webhook y MP_BACK_URL es el origen del frontend sin rutas.
+3. Ejecutar npm --prefix backend run payments:verify para comprobar credencial de prueba e ID. No imprime tokens ni hace cobros.
+4. En el panel de Mercado Pago habilitar notificaciones de tipo payment para la aplicación y el entorno de prueba. Usar la misma URL y clave de firma del .env.
+5. Reiniciar el backend después de cambiar .env. Abrir la tienda con el mismo origen HTTPS configurado como MP_BACK_URL para conservar el acceso al volver del checkout. Un túnel debe dirigir las rutas de Angular y /api al proyecto; localhost no recibe webhooks externos. No se publica un túnel automáticamente.
+6. Iniciar sesión en Mercado Pago con un comprador de prueba distinto del vendedor, del mismo país. Usar los medios de prueba oficiales. Verificar en la base y en Mis pedidos que el pago pasó a aprobado y el movimiento se registró una sola vez.
+
+Sin estas variables, iniciar el pago responde 503. El resto de la tienda sigue disponible; no se generan URLs ni aprobaciones simuladas en el entorno normal. Los casos simulados existen únicamente en las pruebas.
+
+### Prueba local mediante HTTPS
+
+Compilar Angular con `npm run build` y, con el puerto 3000 libre, ejecutar `npm --prefix backend run preview`. Este modo sirve el build de Angular y `/api` desde el mismo origen; no publica archivos del repositorio. Luego ejecutar `cloudflared tunnel --no-autoupdate --protocol http2 --url http://127.0.0.1:3000` con el binario oficial de Cloudflare.
+
+Usar el origen HTTPS generado como `MP_BACK_URL` y `APP_URL`; para `MP_NOTIFICATION_URL`, agregar `/api/pagos/mercadopago/webhook`. Registrar esa misma URL en Webhooks de Mercado Pago, seleccionar Pagos en modo de prueba y guardar su clave de firma en `MP_WEBHOOK_SECRET`. Reiniciar preview después de modificar `.env` y verificar la configuración con `npm --prefix backend run payments:verify`.
+
+El enlace temporal es público y funciona mientras sigan ejecutándose el túnel y el servidor. Al reiniciar el túnel cambia el dominio: actualizar las variables, el panel de Mercado Pago y reiniciar el servidor. Abrir la tienda desde ese HTTPS al probar el checkout.
+
+### Stock y estados
+
+Agregar al carrito no reserva. Crear el pedido reserva por 30 minutos y lo deja pendiente. Hay hasta tres pedidos pendientes con reserva vigente por usuario. Los importes se obtienen de los precios guardados por el servidor, con hasta 100 combinaciones y un total máximo de 99.999.999,99 ARS.
+
+Stock físico es existencias.cantidad; stock disponible es cantidad-reservada. El catálogo, detalle, carrito y selección de transferencias muestran disponibilidad. Administración conserva cantidades físicas e indica las reservadas al editar. La restricción MySQL garantiza 0 <= reservada <= cantidad. Ajustes y despachos rechazan gastar unidades reservadas. Reservar, liberar y consumir incrementa la versión del producto para proteger formularios abiertos.
+
+Un pago aprobado se consulta en la API de Mercado Pago y se valida contra referencia externa, importe exacto, ARS, vendedor y modo de prueba. Dentro de una transacción se consumen las reservas, se descuentan cantidades físicas, se registran movimientos de venta y el pedido pasa a confirmado/aprobado. Notificaciones repetidas no descuentan otra vez. El retorno del navegador y sus parámetros status/payment_id nunca prueban que se pagó.
+
+Un pago rechazado conserva la reserva hasta su vencimiento para permitir otro intento en el mismo checkout. Cancelar un pedido pendiente libera la reserva después de conciliar sus pagos. Al vencer, el worker consulta primero a Mercado Pago; si no puede consultarlo mantiene la reserva y reintenta. El checkout tiene la misma fecha de vencimiento. Un pago aprobado tardíamente, duplicado, reembolsado o con contracargo queda en revisión; no consume nuevamente mercadería liberada ni repone stock automáticamente. El administrador lo ve en /admin/pagos y debe revisar la operación en Mercado Pago antes de entregar o gestionar una devolución de dinero.
+
+Los pedidos históricos sin_pago no se convierten en pagos pendientes ni se cobran mediante este flujo.
+
+### Seguridad y recuperación de errores
+
+La referencia externa es un UUID único por pedido. La creación del checkout se reclama en una transacción y el acceso HTTP al proveedor sucede fuera de los bloqueos de MySQL. Se conserva una sola preferencia por pedido. Un timeout ambiguo no dispara otra creación a ciegas: se busca la preferencia por referencia y se recupera. Errores definitivos de validación o autenticación permiten corregir y reintentar.
+
+El webhook valida HMAC-SHA256 de id, x-request-id y ts contra MP_WEBHOOK_SECRET, compara en tiempo constante y admite timestamps de hasta 15 minutos de diferencia. data.id de query y body deben coincidir. La notificación encola el id y devuelve 200; el worker obtiene el estado real desde la API. No se confía en el estado del body. La cola persiste, reintenta hasta 10 veces y recupera trabajos abandonados. Si entra otro evento durante su procesamiento, su versión evita perderlo. La firma y los importes se prueban sin hacer pagos reales.
+
+Cada 10 segundos se procesan eventos y vencimientos. También se concilian hasta 10 checkouts recientes por pasada, revisando cada uno como máximo una vez por minuto durante siete días, para recuperar notificaciones perdidas. Los pedidos pueden sincronizarse manualmente desde Mis pedidos en cualquier momento. No se guardan tarjetas ni el JSON completo del pago y no se registran credenciales.
+
+Rutas autenticadas:
+- POST /api/pedidos/:id/pagar: crea o recupera el checkout propio.
+- POST /api/pedidos/:id/sincronizar: consulta pagos reales del pedido propio.
+- POST /api/pedidos/:id/cancelar: cancela un pendiente y libera stock si corresponde.
+- GET /api/admin/pagos-revision: administrador, hasta 100 casos que requieren revisión.
+- POST /api/pagos/mercadopago/webhook: público, exige firma válida; nunca una sesión de usuario.
+
+Pruebas: detener el backend que ejecuta los workers y ejecutar npm --prefix backend test. Las suites comparten una base local y se ejecutan en serie para no interferir con limpiezas de fixtures; dentro de ellas se prueban solicitudes concurrentes. payments.test.js usa un proveedor inyectado y verifica reservas, protección de ajustes y traslados, doble clic, firma, importes y vendedor incorrectos, modo real rechazado, aprobación única, cancelación, vencimiento, timeout y pago tardío. La compra real de prueba en Mercado Pago queda como verificación pendiente hasta configurar credenciales y HTTPS.
+
+Documentación oficial: [Preferencias](https://www.mercadopago.com.ar/developers/es/reference/online-payments/checkout-pro-preferences/create-preference/post), [Notificaciones](https://www.mercadopago.com.ar/developers/en/docs/checkout-pro-preferences/payment-notifications), [Compras de prueba](https://www.mercadopago.com.ar/developers/en/docs/checkout-pro-preferences/integration-test/test-purchases).
