@@ -35,6 +35,7 @@ transfersRouter.get('/ubicaciones', async (req, res) => {
   );
   res.json(rows.map((u) => ({ ...u, activo: Boolean(u.activo), unidades: Number(u.unidades) })));
 });
+// Crea depósitos o tiendas donde se administran existencias por variante.
 transfersRouter.post('/ubicaciones', async (req, res) => {
   const data = locationSchema.parse(req.body);
   try {
@@ -92,16 +93,17 @@ transfersRouter.get('/ubicaciones/:id/stock', async (req, res) => {
   ]);
   if (!locations.length) throw httpError(404, 'Ubicación no encontrada o inactiva');
   const [rows] = await pool.execute(
-    `SELECT v.id AS variante_id,p.id AS producto_id,p.nombre AS producto,v.sku,t.nombre AS talle,c.nombre AS color,e.cantidad
+    `SELECT v.id AS variante_id,p.id AS producto_id,p.nombre AS producto,v.sku,t.nombre AS talle,c.nombre AS color,(e.cantidad-e.reservada) AS cantidad
     FROM existencias e JOIN variantes_producto v ON v.id=e.variante_id JOIN productos p ON p.id=v.producto_id
     JOIN talles t ON t.id=v.talle_id JOIN colores c ON c.id=v.color_id
-    WHERE e.ubicacion_id=? AND e.cantidad>0 AND v.activo=1 AND p.activo=1 ORDER BY p.nombre,v.id`,
+    WHERE e.ubicacion_id=? AND e.cantidad-e.reservada>0 AND v.activo=1 AND p.activo=1 ORDER BY p.nombre,v.id`,
     [id],
   );
   res.json(rows);
 });
 
 // Mismo orden que edición de productos: producto, variante, ubicación, existencias.
+// Bloquea recursos en orden estable para que dos operaciones no gasten el mismo stock.
 async function lockResources(db, items, locations, checkActive = true) {
   const variantIds = items.map((i) => i.variante_id).sort((a, b) => a - b);
   const [refs] = await db.execute(
@@ -177,6 +179,7 @@ transfersRouter.get('/transferencias', async (req, res) => {
 transfersRouter.get('/transferencias/:id', async (req, res) =>
   res.json(await transferDetail(parseId(req.params.id))),
 );
+// Crea un borrador: comprueba disponibilidad, pero todavía no mueve mercadería.
 transfersRouter.post('/transferencias', async (req, res) => {
   const data = draftSchema.parse(req.body);
   const result = await transaction(async (db) => {
@@ -184,7 +187,11 @@ transfersRouter.post('/transferencias', async (req, res) => {
     for (const item of data.items)
       if (
         (stock.find((s) => s.variante_id === item.variante_id && s.ubicacion_id === data.origen_id)
-          ?.cantidad || 0) < item.cantidad
+          ?.cantidad || 0) -
+          (stock.find(
+            (s) => s.variante_id === item.variante_id && s.ubicacion_id === data.origen_id,
+          )?.reservada || 0) <
+        item.cantidad
       )
         throw httpError(409, 'Stock insuficiente en el origen. Actualizá las cantidades.');
     const [created] = await db.execute(
@@ -200,6 +207,8 @@ transfersRouter.post('/transferencias', async (req, res) => {
   });
   res.status(201).json(result);
 });
+// Despachar resta en origen; recibir suma en destino. Solo un borrador se puede cancelar.
+// Stock, movimiento y estado se guardan juntos: ante cualquier fallo se revierte todo.
 transfersRouter.post('/transferencias/:id/:accion', async (req, res) => {
   const id = parseId(req.params.id),
     action = z.enum(['despachar', 'recibir', 'cancelar']).parse(req.params.accion);
@@ -235,7 +244,10 @@ transfersRouter.post('/transferencias/:id/:accion', async (req, res) => {
       const previous = stock.find(
         (s) => s.variante_id === item.variante_id && s.ubicacion_id === location,
       );
-      if (action === 'despachar' && (!previous || previous.cantidad < item.cantidad))
+      if (
+        action === 'despachar' &&
+        (!previous || previous.cantidad - previous.reservada < item.cantidad)
+      )
         throw httpError(
           409,
           `Stock insuficiente para una variante. No se despachó ninguna unidad.`,

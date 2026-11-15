@@ -105,13 +105,18 @@ test('Pedidos: stock atómico, reintentos, aislamiento, precios y copia históri
       'SELECT SUM(cantidad) AS cantidad FROM existencias WHERE variante_id=?',
       [variant],
     );
-    assert.equal(Number(stock[0].cantidad), 0);
+    assert.equal(Number(stock[0].cantidad), 2, 'Reservar no descuenta stock físico');
+    const [[reserved]] = await pool.execute(
+      'SELECT SUM(reservada) AS total FROM existencias WHERE variante_id=?',
+      [variant],
+    );
+    assert.equal(Number(reserved.total), 2);
+    assert.equal(order.estado, 'pendiente');
     const [moves] = await pool.execute(
       "SELECT SUM(cantidad) AS cantidad,COUNT(*) AS filas FROM movimientos_stock WHERE pedido_id=? AND motivo='venta'",
       [order.id],
     );
-    assert.equal(Number(moves[0].cantidad), -2);
-    assert.equal(moves[0].filas, 2);
+    assert.equal(moves[0].filas, 0, 'Todavía no hay una venta aprobada');
     const [cart] = await pool.execute('SELECT * FROM carrito_items WHERE usuario_id=?', [owner]);
     assert.equal(cart.length, 0);
     await pool.execute('UPDATE productos SET nombre=?,precio=99 WHERE id=?', [
@@ -123,35 +128,44 @@ test('Pedidos: stock atómico, reintentos, aislamiento, precios y copia históri
     assert.equal(historical.body.total, 21);
     assert.equal(historical.body.items[0].nombre, prefix);
     assert.equal(historical.body.direccion_entrega, 'Dirección original');
-    assert.equal((await call('', 'POST', owner === users[0] ? body : otherBody, owner)).body.id, order.id);
+    assert.equal(
+      (await call('', 'POST', owner === users[0] ? body : otherBody, owner)).body.id,
+      order.id,
+    );
     const [remaining] = await pool.execute(
       'SELECT cantidad FROM carrito_items WHERE usuario_id=?',
       [other],
     );
     assert.equal(remaining[0].cantidad, 2);
   } finally {
-    for (const u of users) {
-      await pool.execute('DELETE FROM carrito_items WHERE usuario_id=?', [u]);
-      await pool.execute('DELETE FROM movimientos_stock WHERE usuario_id=?', [u]);
-      await pool.execute(
-        'DELETE d FROM pedido_detalles d JOIN pedido_items i ON i.id=d.item_id JOIN pedidos p ON p.id=i.pedido_id WHERE p.usuario_id=?',
-        [u],
-      );
-      await pool.execute(
-        'DELETE i FROM pedido_items i JOIN pedidos p ON p.id=i.pedido_id WHERE p.usuario_id=?',
-        [u],
-      );
-      await pool.execute('DELETE FROM pedido_confirmaciones WHERE usuario_id=?', [u]);
-      await pool.execute('DELETE FROM pedidos WHERE usuario_id=?', [u]);
+    try {
+      for (const u of users) {
+        await pool.execute('DELETE FROM carrito_items WHERE usuario_id=?', [u]);
+        await pool.execute('DELETE FROM movimientos_stock WHERE usuario_id=?', [u]);
+        const [ownOrders] = await pool.execute('SELECT id FROM pedidos WHERE usuario_id=?', [u]);
+        for (const o of ownOrders)
+          await pool.execute('DELETE FROM reservas_pedido WHERE pedido_id=?', [o.id]);
+        await pool.execute(
+          'DELETE d FROM pedido_detalles d JOIN pedido_items i ON i.id=d.item_id JOIN pedidos p ON p.id=i.pedido_id WHERE p.usuario_id=?',
+          [u],
+        );
+        await pool.execute(
+          'DELETE i FROM pedido_items i JOIN pedidos p ON p.id=i.pedido_id WHERE p.usuario_id=?',
+          [u],
+        );
+        await pool.execute('DELETE FROM pedido_confirmaciones WHERE usuario_id=?', [u]);
+        await pool.execute('DELETE FROM pedidos WHERE usuario_id=?', [u]);
+      }
+      if (variant) {
+        await pool.execute('DELETE FROM existencias WHERE variante_id=?', [variant]);
+        await pool.execute('DELETE FROM variantes_producto WHERE id=?', [variant]);
+      }
+      if (product) await pool.execute('DELETE FROM productos WHERE id=?', [product]);
+      for (const l of locations) await pool.execute('DELETE FROM ubicaciones WHERE id=?', [l]);
+      for (const u of users) await pool.execute('DELETE FROM usuarios WHERE id=?', [u]);
+    } finally {
+      await new Promise((r) => server.close(r));
+      await pool.end();
     }
-    if (variant) {
-      await pool.execute('DELETE FROM existencias WHERE variante_id=?', [variant]);
-      await pool.execute('DELETE FROM variantes_producto WHERE id=?', [variant]);
-    }
-    if (product) await pool.execute('DELETE FROM productos WHERE id=?', [product]);
-    for (const l of locations) await pool.execute('DELETE FROM ubicaciones WHERE id=?', [l]);
-    for (const u of users) await pool.execute('DELETE FROM usuarios WHERE id=?', [u]);
-    await new Promise((r) => server.close(r));
-    await pool.end();
   }
 });

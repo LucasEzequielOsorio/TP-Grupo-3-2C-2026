@@ -31,6 +31,7 @@ const response = (u) => ({
 });
 // Mantiene un costo de verificación similar para correos inexistentes.
 const dummyHash = await bcrypt.hash('unused-dummy-password', 12);
+// Compara el hash de contraseña y entrega un JWT para las peticiones autenticadas.
 authRouter.post('/login', async (req, res) => {
   const data = loginSchema.parse(req.body);
   const [rows] = await pool.execute('SELECT * FROM usuarios WHERE email = ? LIMIT 1', [data.email]);
@@ -39,6 +40,7 @@ authRouter.post('/login', async (req, res) => {
   if (!user || !user.activo || !valid) throw httpError(401, 'Email o contraseña incorrectos');
   res.json(response(user));
 });
+// Valida los datos y registra un cliente; el rol admin no se toma del formulario público.
 authRouter.post('/registro', async (req, res) => {
   const data = registerSchema.parse(req.body);
   const hash = await bcrypt.hash(data.password, 12);
@@ -48,6 +50,7 @@ authRouter.post('/registro', async (req, res) => {
   );
   res.status(201).json(response({ id: result.insertId, email: data.email, rol: 'cliente' }));
 });
+// Verifica JWT y versión de cuenta; permite invalidar sesiones al cambiar credenciales.
 export async function authenticate(req, res, next) {
   const header = req.headers.authorization || '';
   if (!header.startsWith('Bearer ')) throw httpError(401, 'Iniciá sesión para continuar');
@@ -71,6 +74,7 @@ export async function authenticate(req, res, next) {
   req.authVersion = rows[0].auth_version;
   next();
 }
+// Protege operaciones administrativas en el servidor, además del guard de Angular.
 export function requireAdmin(req, res, next) {
   if (req.user.rol !== 'admin') throw httpError(403, 'Se requiere acceso administrador');
   next();

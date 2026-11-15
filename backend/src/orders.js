@@ -23,7 +23,8 @@ const schema = z.object({
     .min(1)
     .max(100),
 });
-async function detail(db, user, id) {
+// Devuelve el pedido solo si pertenece al usuario; usa precios guardados al comprar.
+export async function detail(db, user, id) {
   const [orders] = await db.execute('SELECT * FROM pedidos WHERE id=? AND usuario_id=?', [
     id,
     user,
@@ -45,7 +46,7 @@ async function detail(db, user, id) {
 }
 ordersRouter.get('/', async (req, res) => {
   const [rows] = await pool.execute(
-    'SELECT p.id,p.estado,p.creado_en,SUM(i.cantidad) AS unidades,SUM(i.cantidad*i.precio_unitario) AS total FROM pedidos p JOIN pedido_items i ON i.pedido_id=p.id WHERE p.usuario_id=? GROUP BY p.id ORDER BY p.id DESC LIMIT 100',
+    'SELECT p.id,p.estado,p.pago_estado,p.reserva_hasta,p.creado_en,SUM(i.cantidad) AS unidades,SUM(i.cantidad*i.precio_unitario) AS total FROM pedidos p JOIN pedido_items i ON i.pedido_id=p.id WHERE p.usuario_id=? GROUP BY p.id ORDER BY p.id DESC LIMIT 100',
     [req.user.id],
   );
   res.json(rows);
@@ -53,6 +54,8 @@ ordersRouter.get('/', async (req, res) => {
 ordersRouter.get('/:id', async (req, res) =>
   res.json(await detail(pool, req.user.id, parseId(req.params.id))),
 );
+// Convierte el carrito en pedido con precios del servidor y reservas por ubicación.
+// La reserva reduce disponibilidad, pero la baja física ocurre al verificar el pago.
 ordersRouter.post('/', async (req, res) => {
   const data = schema.parse(req.body);
   const order = await transaction(async (db) => {
@@ -64,6 +67,15 @@ ordersRouter.post('/', async (req, res) => {
       [req.user.id, data.clave],
     );
     if (done.length) return detail(db, req.user.id, done[0].pedido_id);
+    const [[pending]] = await db.execute(
+      "SELECT COUNT(*) AS total FROM pedidos WHERE usuario_id=? AND estado='pendiente' AND reserva_hasta>UTC_TIMESTAMP()",
+      [req.user.id],
+    );
+    if (pending.total >= 3)
+      throw httpError(
+        409,
+        'Tenés tres pedidos pendientes. Pagá o cancelá alguno antes de crear otro.',
+      );
     const [cart] = await db.execute(
       'SELECT ci.*,v.producto_id FROM carrito_items ci JOIN variantes_producto v ON v.id=ci.variante_id WHERE ci.usuario_id=? ORDER BY ci.variante_id',
       [req.user.id],
@@ -114,13 +126,21 @@ ordersRouter.post('/', async (req, res) => {
       if (
         !p.activo ||
         !v.activo ||
-        stock.filter((s) => s.variante_id === v.id).reduce((sum, s) => sum + s.cantidad, 0) <
-          item.cantidad
+        stock
+          .filter((s) => s.variante_id === v.id)
+          .reduce((sum, s) => sum + s.cantidad - s.reservada, 0) < item.cantidad
       )
         throw httpError(409, 'No hay stock suficiente para ' + p.nombre + '. Actualizá el carrito');
     }
+    const totalCents = cart.reduce(
+      (sum, i) =>
+        sum + Math.round(products.find((p) => p.id === i.producto_id).precio * 100) * i.cantidad,
+      0,
+    );
+    if (totalCents > 9999999999)
+      throw httpError(400, 'El total del pedido supera el importe máximo permitido.');
     const [created] = await db.execute(
-      "INSERT INTO pedidos(usuario_id,estado,direccion_entrega) VALUES (?,'confirmado',?)",
+      "INSERT INTO pedidos(usuario_id,estado,direccion_entrega,pago_estado,reserva_hasta) VALUES (?,'pendiente',?,'pendiente',UTC_TIMESTAMP()+INTERVAL 30 MINUTE)",
       [req.user.id, users[0].direccion],
     );
     for (const item of cart) {
@@ -137,17 +157,17 @@ ordersRouter.post('/', async (req, res) => {
         v.color,
       ]);
       let remaining = item.cantidad;
-      // Reparte stock entre ubicaciones activas en orden de id.
+      // Reserva disponibilidad; registra la venta cuando el pago está aprobado.
       for (const s of stock.filter((s) => s.variante_id === v.id)) {
-        const take = Math.min(remaining, s.cantidad);
+        const take = Math.min(remaining, s.cantidad - s.reservada);
         if (!take) continue;
         await db.execute(
-          'UPDATE existencias SET cantidad=cantidad-? WHERE variante_id=? AND ubicacion_id=?',
+          'UPDATE existencias SET reservada=reservada+? WHERE variante_id=? AND ubicacion_id=?',
           [take, v.id, s.ubicacion_id],
         );
         await db.execute(
-          "INSERT INTO movimientos_stock(variante_id,ubicacion_id,cantidad,motivo,usuario_id,pedido_id) VALUES (?,?,?,'venta',?,?)",
-          [v.id, s.ubicacion_id, -take, req.user.id, created.insertId],
+          'INSERT INTO reservas_pedido(pedido_id,variante_id,ubicacion_id,cantidad) VALUES (?,?,?,?)',
+          [created.insertId, v.id, s.ubicacion_id, take],
         );
         remaining -= take;
         if (!remaining) break;

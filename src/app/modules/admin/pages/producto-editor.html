@@ -192,12 +192,18 @@
                             [name]="'stock' + i + '-' + e.ubicacion_id"
                             type="number"
                             [(ngModel)]="e.cantidad"
-                            min="0"
+                            [min]="e.reservada || 0"
                             max="1000000"
                             step="1"
                             required
                             [disabled]="!ubicacionActiva(e.ubicacion_id)"
                           />
+                          @if (e.reservada) {
+                            <small class="field-help"
+                              >{{ e.reservada }} reservadas para pagos ·
+                              {{ e.cantidad - (e.reservada || 0) }} disponibles</small
+                            >
+                          }
                         </div>
                       }
                     </div>

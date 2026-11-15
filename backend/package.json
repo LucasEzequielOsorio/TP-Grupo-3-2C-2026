@@ -5,9 +5,11 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
+    "preview": "node src/preview-server.js",
     "admin:create": "node scripts/create-admin.js",
     "db:migrate": "node scripts/migrate.js",
-    "test": "node --test test/*.test.js"
+    "test": "node --test --test-concurrency=1 test/*.test.js",
+    "payments:verify": "node scripts/verify-mercadopago.js"
   },
   "engines": {
     "node": ">=24"
@@ -19,6 +21,7 @@
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
     "mysql2": "^3.15.0",
+    "nodemailer": "^10.3.1",
     "sharp": "^0.35.5",
     "zod": "^4.1.0"
   }

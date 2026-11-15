@@ -34,6 +34,15 @@ export interface RespuestaCargaPerfil {
 }
 @Service()
 export class UsuarioService {
+  verificarRecuperacion(token: string) {
+    return this.http.post<{ valido: boolean }>('/api/auth/verificar-recuperacion', { token });
+  }
+  solicitarRecuperacion(email: string) {
+    return this.http.post<{ mensaje: string }>('/api/auth/recuperar', { email });
+  }
+  restablecerPassword(token: string, password: string) {
+    return this.http.post<{ mensaje: string }>('/api/auth/restablecer', { token, password });
+  }
   getCuenta() {
     return this.http.get<{ usuario: CuentaUsuario }>('/api/auth/cuenta', {
       headers: { Authorization: 'Bearer ' + (localStorage.getItem('auth_token') || '') },

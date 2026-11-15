@@ -14,7 +14,7 @@
   } @else if (detalle(); as pedido) {
     <h1>Pedido #{{ pedido.id }}</h1>
     <p role="status">
-      Estado: {{ pedido.estado }} · {{ pedido.creado_en | date: 'dd/MM/yyyy HH:mm' }}
+      {{ pagoTexto(pedido.pago_estado) }} · {{ pedido.creado_en | date: 'dd/MM/yyyy HH:mm' }}
     </p>
     <div class="cart-layout">
       <section aria-label="Prendas del pedido">
@@ -42,7 +42,32 @@
           <span>Total</span
           ><strong>{{ pedido.total | currency: 'ARS' : 'symbol' : '1.2-2' }}</strong>
         </div>
-        <p>Los precios corresponden al momento de confirmar. No se realizó un cobro online.</p>
+        <p>Los precios corresponden al momento de crear el pedido.</p>
+        @if (pedido.estado === 'pendiente' && pedido.pago_estado !== 'revision') {
+          <p>
+            Reserva hasta {{ pedido.reserva_hasta | date: 'dd/MM HH:mm' }}. El pedido se confirma
+            cuando verificamos el pago.
+          </p>
+          <button
+            class="shop-button dark"
+            (click)="pagar()"
+            [disabled]="procesando() || !vigente()"
+          >
+            {{ procesando() ? 'Procesando…' : 'Pagar con Mercado Pago' }}
+          </button>
+          <button class="shop-button" (click)="cancelar()" [disabled]="procesando()">
+            Cancelar pedido
+          </button>
+        }
+        @if (pedido.pago_estado !== 'sin_pago') {
+          <button class="shop-button" (click)="actualizarPago()" [disabled]="procesando()">
+            Actualizar estado del pago
+          </button>
+        }
+        @if (errorPago()) {
+          <p class="cart-alert" role="alert">{{ errorPago() }}</p>
+        }
+        <p class="variant-stock" role="status">{{ pagoTexto(pedido.pago_estado) }}</p>
         <a class="shop-button dark" routerLink="/tienda/pedidos">Ver mis pedidos</a>
         <a class="shop-button" routerLink="/tienda/productos">Seguir comprando →</a>
       </aside>
@@ -55,8 +80,8 @@
         <div class="cart-description">
           <h2>Pedido #{{ pedido.id }}</h2>
           <p>
-            {{ pedido.creado_en | date: 'dd/MM/yyyy HH:mm' }} · {{ pedido.estado }} ·
-            {{ pedido.unidades }} unidades
+            {{ pedido.creado_en | date: 'dd/MM/yyyy HH:mm' }} ·
+            {{ pagoTexto(pedido.pago_estado) }} · {{ pedido.unidades }} unidades
           </p>
           <a [routerLink]="['/tienda/pedidos', pedido.id]">Ver detalle →</a>
         </div>
