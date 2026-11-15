@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { z } from 'zod';
 import { pool, transaction } from './db.js';
 import { authenticate, requireAdmin } from './auth.js';
 import { httpError, parseId, productSchema, gallerySchema, photosSchema } from './validation.js';
@@ -65,8 +66,54 @@ export async function getProduct(id, admin = false, db = pool) {
   };
 }
 productsRouter.get('/', async (req, res) => {
-  const [rows] = await pool.execute(`${listQuery} WHERE p.activo = 1 ORDER BY p.id DESC`);
-  res.json(rows.map((p) => normalize(p)));
+  const q = z
+    .object({
+      pagina: z.coerce.number().int().min(1).max(100000).default(1),
+      buscar: z.string().trim().max(150).default(''),
+      categoria: z.string().trim().max(100).default(''),
+      orden: z.enum(['nombre', 'menor', 'mayor']).default('nombre'),
+      solo_stock: z.enum(['true', 'false']).default('false'),
+    })
+    .parse(req.query);
+  // Los filtros se aplican antes de contar y paginar; los valores son parámetros SQL.
+  const conditions = ['activo=1'],
+    params = [];
+  if (q.buscar) {
+    conditions.push("LOCATE(?, CONCAT_WS(' ',nombre,descripcion,clasificacion))>0");
+    params.push(q.buscar);
+  }
+  if (q.categoria) {
+    conditions.push('clasificacion=?');
+    params.push(q.categoria);
+  }
+  if (q.solo_stock === 'true') conditions.push('stock_disponible>0');
+  const from = `FROM (${listQuery}) catalogo WHERE ${conditions.join(' AND ')}`;
+  const [[count]] = await pool.execute(`SELECT COUNT(*) total ${from}`, params);
+  const total = Number(count.total),
+    paginas = Math.max(1, Math.ceil(total / 6));
+  const pagina = Math.min(q.pagina, paginas);
+  // La columna de orden sale de una lista cerrada; ID desempata precios y nombres iguales.
+  const order = {
+    nombre: 'nombre ASC,id ASC',
+    menor: 'precio ASC,id ASC',
+    mayor: 'precio DESC,id ASC',
+  }[q.orden];
+  const [rows] = await pool.execute(
+    `SELECT * ${from} ORDER BY ${order} LIMIT 6 OFFSET ${(pagina - 1) * 6}`,
+    params,
+  );
+  // Las categorías no dependen de la página ni de los filtros seleccionados.
+  const [categories] = await pool.execute(
+    'SELECT DISTINCT c.nombre FROM categorias c JOIN productos p ON p.categoria_id=c.id WHERE p.activo=1 ORDER BY c.nombre',
+  );
+  res.json({
+    items: rows.map((p) => normalize(p)),
+    total,
+    pagina,
+    paginas,
+    por_pagina: 6,
+    categorias: categories.map((c) => c.nombre),
+  });
 });
 productsRouter.get('/:id', async (req, res) => res.json(await getProduct(parseId(req.params.id))));
 adminRouter.get('/catalogos', async (req, res) => {

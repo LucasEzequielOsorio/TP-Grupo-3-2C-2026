@@ -44,7 +44,7 @@
           type="button"
           [class.selected]="categoria() === c"
           [attr.aria-pressed]="categoria() === c"
-          (click)="categoria.set(c)"
+          (click)="categoria.set(c); cargar(1)"
         >
           {{ c }}
         </button>
@@ -56,14 +56,18 @@
         aria-label="Buscar prendas"
         placeholder="Buscar una prenda…"
         [ngModel]="busqueda()"
-        (ngModelChange)="busqueda.set($event)"
+        (ngModelChange)="buscar($event)"
       /><label class="stock-check"
-        ><input type="checkbox" [ngModel]="soloStock()" (ngModelChange)="soloStock.set($event)" />
+        ><input
+          type="checkbox"
+          [ngModel]="soloStock()"
+          (ngModelChange)="soloStock.set($event); cargar(1)"
+        />
         Solo disponibles</label
       ><select
         aria-label="Ordenar productos"
         [ngModel]="orden()"
-        (ngModelChange)="orden.set($event)"
+        (ngModelChange)="orden.set($event); cargar(1)"
       >
         <option value="nombre">Ordenar por nombre</option>
         <option value="menor">Menor precio</option>
@@ -80,7 +84,8 @@
       <div class="shop-empty" role="status">Estamos preparando la colección…</div>
     } @else {
       <p class="results">
-        {{ visibles().length }} {{ visibles().length === 1 ? 'prenda' : 'prendas' }}
+        {{ total() }} {{ total() === 1 ? 'prenda' : 'prendas' }} · Página {{ pagina() }} de
+        {{ paginas() }}
       </p>
       <div class="product-grid">
         @for (p of visibles(); track p.id) {
@@ -93,6 +98,21 @@
           </div>
         }
       </div>
+      @if (paginas() > 1) {
+        <nav class="catalog-pagination" aria-label="Páginas de la colección">
+          <button class="shop-button" (click)="cargar(pagina() - 1)" [disabled]="pagina() <= 1">
+            ← Anterior
+          </button>
+          <span aria-live="polite">Página {{ pagina() }} de {{ paginas() }}</span>
+          <button
+            class="shop-button"
+            (click)="cargar(pagina() + 1)"
+            [disabled]="pagina() >= paginas()"
+          >
+            Siguiente →
+          </button>
+        </nav>
+      }
     }
   </section>
   <footer class="shop-footer">
