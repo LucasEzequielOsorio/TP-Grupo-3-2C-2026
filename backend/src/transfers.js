@@ -35,6 +35,7 @@ transfersRouter.get('/ubicaciones', async (req, res) => {
   );
   res.json(rows.map((u) => ({ ...u, activo: Boolean(u.activo), unidades: Number(u.unidades) })));
 });
+// Crea depósitos o tiendas donde se administran existencias por variante.
 transfersRouter.post('/ubicaciones', async (req, res) => {
   const data = locationSchema.parse(req.body);
   try {
@@ -102,6 +103,7 @@ transfersRouter.get('/ubicaciones/:id/stock', async (req, res) => {
 });
 
 // Mismo orden que edición de productos: producto, variante, ubicación, existencias.
+// Bloquea recursos en orden estable para que dos operaciones no gasten el mismo stock.
 async function lockResources(db, items, locations, checkActive = true) {
   const variantIds = items.map((i) => i.variante_id).sort((a, b) => a - b);
   const [refs] = await db.execute(
@@ -177,6 +179,7 @@ transfersRouter.get('/transferencias', async (req, res) => {
 transfersRouter.get('/transferencias/:id', async (req, res) =>
   res.json(await transferDetail(parseId(req.params.id))),
 );
+// Crea un borrador: comprueba disponibilidad, pero todavía no mueve mercadería.
 transfersRouter.post('/transferencias', async (req, res) => {
   const data = draftSchema.parse(req.body);
   const result = await transaction(async (db) => {
@@ -204,6 +207,8 @@ transfersRouter.post('/transferencias', async (req, res) => {
   });
   res.status(201).json(result);
 });
+// Despachar resta en origen; recibir suma en destino. Solo un borrador se puede cancelar.
+// Stock, movimiento y estado se guardan juntos: ante cualquier fallo se revierte todo.
 transfersRouter.post('/transferencias/:id/:accion', async (req, res) => {
   const id = parseId(req.params.id),
     action = z.enum(['despachar', 'recibir', 'cancelar']).parse(req.params.accion);

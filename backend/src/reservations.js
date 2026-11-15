@@ -1,5 +1,7 @@
 import { httpError } from './validation.js';
 export const marks = (ids) => ids.map(() => '?').join(',');
+// Se llama dentro de una transacción con el pedido bloqueado.
+// consume=true: baja stock físico y reservado por venta. false: libera solo lo reservado.
 export async function finishReservation(db, order, consume = false) {
   const [rows] = await db.execute(
     "SELECT r.*,v.producto_id FROM reservas_pedido r JOIN variantes_producto v ON v.id=r.variante_id WHERE r.pedido_id=? AND r.estado='activa' ORDER BY r.variante_id,r.ubicacion_id",

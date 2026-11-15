@@ -23,6 +23,7 @@ const schema = z.object({
     .min(1)
     .max(100),
 });
+// Devuelve el pedido solo si pertenece al usuario; usa precios guardados al comprar.
 export async function detail(db, user, id) {
   const [orders] = await db.execute('SELECT * FROM pedidos WHERE id=? AND usuario_id=?', [
     id,
@@ -53,6 +54,8 @@ ordersRouter.get('/', async (req, res) => {
 ordersRouter.get('/:id', async (req, res) =>
   res.json(await detail(pool, req.user.id, parseId(req.params.id))),
 );
+// Convierte el carrito en pedido con precios del servidor y reservas por ubicación.
+// La reserva reduce disponibilidad, pero la baja física ocurre al verificar el pago.
 ordersRouter.post('/', async (req, res) => {
   const data = schema.parse(req.body);
   const order = await transaction(async (db) => {

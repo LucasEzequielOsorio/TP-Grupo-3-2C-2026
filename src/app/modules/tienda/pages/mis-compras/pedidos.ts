@@ -50,6 +50,7 @@ export class Pedidos {
       new Date(p.reserva_hasta).getTime() > Date.now()
     );
   }
+  // Pide el checkout al backend y valida el destino antes de salir a Mercado Pago.
   pagar() {
     const p = this.detalle();
     if (!p || this.procesando() || !this.vigente()) return;
@@ -81,6 +82,7 @@ export class Pedidos {
       },
     });
   }
+  // Consulta al servidor: el estado aprobado nunca se decide desde parámetros del navegador.
   actualizarPago() {
     const p = this.detalle();
     if (!p || this.procesando()) return;

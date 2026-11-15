@@ -24,6 +24,7 @@ function normalize(p, admin = false) {
     cantidad_variantes: Number(p.cantidad_variantes),
   };
 }
+// Arma el detalle con variantes, fotos y existencias; el catálogo público usa stock disponible.
 export async function getProduct(id, admin = false, db = pool) {
   const [rows] = await db.execute(
     `${listQuery} WHERE p.id = ? ${admin ? '' : 'AND p.activo = 1'}`,
@@ -104,6 +105,8 @@ async function validateReferences(db, data) {
   }
 }
 
+// Alta/edición completa en una transacción: referencias, variantes, imágenes y stock.
+// La versión evita sobrescribir cambios que otro administrador hizo entretanto.
 export async function saveProduct(id, input, userId) {
   const isNew = !id;
   const data = productSchema.parse(input);

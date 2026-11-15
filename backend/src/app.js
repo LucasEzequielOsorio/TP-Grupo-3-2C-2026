@@ -25,6 +25,7 @@ app.get('/api/health', async (req, res) => {
   await pool.execute('SELECT 1');
   res.json({ estado: 'ok' });
 });
+// Punto central de rutas: cada módulo aplica su autenticación y permisos correspondientes.
 app.use('/api/auth', authRouter);
 app.use('/api/auth', recoveryRouter);
 app.get('/api/auth/me', authenticate, (req, res) => res.json({ usuario: req.user }));
