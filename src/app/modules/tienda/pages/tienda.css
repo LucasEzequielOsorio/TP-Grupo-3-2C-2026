@@ -549,3 +549,15 @@ h1 > span {
   border-radius: 5px;
   background: #fff;
 }
+.catalog-pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin: 32px 0;
+}
+.catalog-pagination button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
