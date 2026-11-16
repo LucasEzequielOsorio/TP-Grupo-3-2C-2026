@@ -9,6 +9,7 @@ import { finishReservation } from './reservations.js';
 import { mercadoPago, checkoutUrl } from './mercadopago.js';
 
 const cents = (v) => Math.round(Number(v) * 100);
+// Comprueba firma, antigüedad e ID del aviso antes de aceptar un webhook externo.
 export function validSignature(req, secret) {
   const id = req.query['data.id'],
     rid = req.headers['x-request-id'],
@@ -50,6 +51,7 @@ export function createPaymentService(provider = mercadoPago) {
     }),
   );
   admin.use(authenticate, requireAdmin);
+  // Concilia datos obtenidos del proveedor con el pedido; nunca confía en la URL de retorno.
   async function applyPayment(payment) {
     if (!/^\d{1,100}$/.test(String(payment.id)) || !payment.external_reference)
       throw httpError(422, 'Pago sin referencia válida');
@@ -128,6 +130,7 @@ export function createPaymentService(provider = mercadoPago) {
       return order;
     });
   }
+  // Recupera pagos por referencia del pedido y consulta cada operación en Mercado Pago.
   async function syncOrder(id) {
     const [[checkout]] = await pool.execute('SELECT * FROM checkout_pedidos WHERE pedido_id=?', [
       id,
@@ -142,6 +145,7 @@ export function createPaymentService(provider = mercadoPago) {
       [id],
     );
   }
+  // Guarda un enlace validado asociado a la misma preferencia para permitir reintentos.
   async function savePreference(id, pref, reference) {
     if (
       !pref?.id ||
@@ -158,6 +162,7 @@ export function createPaymentService(provider = mercadoPago) {
     );
     return { checkout_url: url };
   }
+  // Solo el dueño puede pagar un pedido vigente; se reutiliza su checkout si ya existe.
   router.post('/:id/pagar', async (req, res) => {
     const id = parseId(req.params.id);
     if (!provider.configured())
@@ -265,6 +270,7 @@ export function createPaymentService(provider = mercadoPago) {
     });
     res.json(await getOrderDetail(req.user.id, id, pool));
   });
+  // Responde rápido: valida y encola el ID; el procesamiento consulta luego la API real.
   webhook.post('/', async (req, res) => {
     if (!validSignature(req, provider.secret)) throw httpError(401, 'Notificación no autorizada');
     if ((req.body.type || req.query.type) !== 'payment') return res.sendStatus(200);
@@ -281,6 +287,7 @@ export function createPaymentService(provider = mercadoPago) {
     );
     res.json(rows);
   });
+  // Reclama un trabajo con bloqueo SQL y lo concilia; admite reintentos y avisos repetidos.
   async function processNotification() {
     const job = await transaction(async (db) => {
       const [[r]] = await db.execute(
@@ -311,6 +318,7 @@ export function createPaymentService(provider = mercadoPago) {
     }
     return true;
   }
+  // Antes de liberar una reserva vencida consulta pagos para no cancelar una compra aprobada.
   async function expireOrders() {
     const [rows] = await pool.execute(
       "SELECT id FROM pedidos WHERE estado='pendiente' AND pago_estado<>'revision' AND reserva_hasta<UTC_TIMESTAMP() ORDER BY id LIMIT 25",
@@ -334,6 +342,7 @@ export function createPaymentService(provider = mercadoPago) {
       }
     }
   }
+  // Procesa la cola y revisa pagos/vencimientos periódicamente sin depender del navegador.
   function startWorker() {
     let pending = null,
       stopped = false;

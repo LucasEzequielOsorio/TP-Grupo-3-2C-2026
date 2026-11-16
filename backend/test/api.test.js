@@ -403,7 +403,7 @@ test('API: autorización, alta, edición, concurrencia y rollback', async () => 
       false,
     );
     assert.equal(
-      (await request('/productos')).body.some((p) => p.id === id),
+      (await request('/productos')).body.items.some((p) => p.id === id),
       false,
     );
     console.log(

@@ -18,6 +18,7 @@ recoveryRouter.use((req, res, next) => {
   res.set('Cache-Control', 'no-store');
   next();
 });
+// Respuesta neutra para no revelar cuentas existentes; limita pedidos y encola el correo.
 recoveryRouter.post(
   '/recuperar',
   rateLimit({
@@ -72,6 +73,7 @@ recoveryRouter.post(
     res.json({ valido: true });
   },
 );
+// Valida y consume el token en una transacción, guarda el hash y revoca sesiones anteriores.
 recoveryRouter.post(
   '/restablecer',
   rateLimit({
@@ -168,9 +170,11 @@ export async function processAccountMail(send = sendAccountMail, onlyUserId = nu
       "UPDATE correos_cuenta SET estado='enviado',actualizado_en=UTC_TIMESTAMP() WHERE id=?",
       [job.id],
     );
-  } catch {
+  } catch (error) {
     // No registrar direcciones, contraseñas, tokens ni errores completos del SMTP.
-    console.warn('No se pudo enviar un correo de cuenta; revisar SMTP y la cola.');
+    const code = /^[A-Z_]{2,30}$/.test(error?.code || '') ? error.code : 'DESCONOCIDO';
+    const response = Number.isInteger(error?.responseCode) ? error.responseCode : 'sin respuesta';
+    console.warn(`No se pudo enviar un correo de cuenta (código ${code}, SMTP ${response}); revisar SMTP y la cola.`);
     if (hash)
       await pool.execute('DELETE FROM recuperacion_tokens WHERE usuario_id=? AND token_hash=?', [
         job.usuario_id,

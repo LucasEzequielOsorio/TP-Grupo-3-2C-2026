@@ -17,6 +17,14 @@ export interface LineaCarrito {
   activo: boolean;
   subtotal: number;
 }
+export interface CatalogoRespuesta {
+  items: DatosProducto[];
+  total: number;
+  pagina: number;
+  paginas: number;
+  por_pagina: number;
+  categorias: string[];
+}
 export interface PedidoResumen {
   id: number;
   estado: string;
@@ -94,8 +102,14 @@ export class TiendaService {
   getCompras() {
     return of<DatosCompra[]>([]);
   }
-  getProductos() {
-    return this.http.get<DatosProducto[]>('/api/productos');
+  getProductos(params: {
+    pagina: number;
+    buscar: string;
+    categoria: string;
+    orden: string;
+    solo_stock: string;
+  }) {
+    return this.http.get<CatalogoRespuesta>('/api/productos', { params });
   }
   getProducto(id: number) {
     return this.http.get<DatosProducto>('/api/productos/' + id);

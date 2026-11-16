@@ -307,3 +307,18 @@ Rutas autenticadas:
 Pruebas: detener el backend que ejecuta los workers y ejecutar npm --prefix backend test. Las suites comparten una base local y se ejecutan en serie para no interferir con limpiezas de fixtures; dentro de ellas se prueban solicitudes concurrentes. payments.test.js usa un proveedor inyectado y verifica reservas, protección de ajustes y traslados, doble clic, firma, importes y vendedor incorrectos, modo real rechazado, aprobación única, cancelación, vencimiento, timeout y pago tardío. La compra real de prueba en Mercado Pago queda como verificación pendiente hasta configurar credenciales y HTTPS.
 
 Documentación oficial: [Preferencias](https://www.mercadopago.com.ar/developers/es/reference/online-payments/checkout-pro-preferences/create-preference/post), [Notificaciones](https://www.mercadopago.com.ar/developers/en/docs/checkout-pro-preferences/payment-notifications), [Compras de prueba](https://www.mercadopago.com.ar/developers/en/docs/checkout-pro-preferences/integration-test/test-purchases).
+# Catálogo público: filtros y paginación
+
+`GET /api/productos` devuelve `{ items, total, pagina, paginas, por_pagina, categorias }`.
+Cada página tiene hasta 6 productos. Parámetros opcionales: `pagina` (entero positivo),
+`buscar` (nombre, descripción o clasificación), `categoria` (nombre exacto),
+`orden` (`nombre`, `menor` o `mayor`) y `solo_stock` (`true` o `false`).
+Los filtros y el orden se aplican en MySQL antes de paginar; las categorías no se
+recortan por página. La disponibilidad descuenta reservas y solo cuenta variantes
+y ubicaciones activas. El ID desempata el orden para mantener páginas estables.
+Una página fuera del rango se ajusta a la última; sin resultados se devuelve página 1.
+
+La implementación está en `backend/src/products.js`; Angular envía parámetros desde
+`productos.ts` mediante `TiendaService`. Cambiar filtros vuelve a página 1; la búsqueda
+espera 300 ms y se cancelan solicitudes anteriores. Pruebas: `backend/test/catalog.test.js`
+y `src/app/modules/tienda/pages/productos/productos.spec.ts`.

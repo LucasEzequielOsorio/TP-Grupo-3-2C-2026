@@ -42,6 +42,7 @@ export function checkoutUrl(value) {
     return false;
   }
 }
+// Centraliza llamadas autenticadas, timeout y errores sin exponer el Access Token al navegador.
 async function api(path, { method = 'GET', body, key } = {}) {
   if (!paymentConfigured())
     throw httpError(503, 'Mercado Pago todavía no está configurado para pruebas.');
@@ -86,6 +87,7 @@ export const mercadoPago = {
       me.tags?.includes('test_user') === true
     );
   },
+  // Crea la preferencia con precios del pedido, vencimiento, webhook y URLs de retorno.
   async createPreference(order, items, reference) {
     let me;
     try {
