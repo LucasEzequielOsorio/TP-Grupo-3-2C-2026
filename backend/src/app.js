@@ -13,9 +13,13 @@ import { summaryRouter } from './controllers/location-summary.controller.js';
 import { cartRouter } from './controllers/cart.controller.js';
 import { ordersRouter } from './controllers/orders.controller.js';
 import { recoveryRouter } from './controllers/recovery.controller.js';
+import {
+  paymentsAdmin,
+  paymentsRouter,
+  paymentsWebhook,
+} from './controllers/payments.controller.js';
 import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { paymentService } from './payments.js';
 
 export const app = express();
 app.disable('x-powered-by');
@@ -34,9 +38,9 @@ app.get('/api/auth/me', authenticate, (req, res) => res.json({ usuario: req.user
 app.use('/api/productos', productsRouter);
 app.use('/api/carrito', cartRouter);
 app.use('/api/pedidos', ordersRouter);
-app.use('/api/pedidos', paymentService.router);
-app.use('/api/pagos/mercadopago/webhook', paymentService.webhook);
-app.use('/api/admin', paymentService.admin);
+app.use('/api/pedidos', paymentsRouter);
+app.use('/api/pagos/mercadopago/webhook', paymentsWebhook);
+app.use('/api/admin', paymentsAdmin);
 app.use(
   '/api/imagenes',
   express.static(imagesDirectory, {

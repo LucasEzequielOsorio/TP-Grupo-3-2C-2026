@@ -98,7 +98,7 @@ export async function createOrder(userId, data) {
         !variant.activo ||
         stock
           .filter((entry) => entry.variante_id === variant.id)
-          .reduce((sum, entry) => sum + entry.cantidad, 0) < item.cantidad
+          .reduce((sum, entry) => sum + (entry.cantidad - entry.reservada), 0) < item.cantidad
       )
         throw httpError(
           409,
