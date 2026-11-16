@@ -5,6 +5,7 @@ import {
   getProduct,
   getProductCatalogs,
   listProducts,
+  listFilteredProducts,
   saveProduct,
 } from '../services/products.service.js';
 import { parseId } from '../validation.js';
@@ -15,7 +16,7 @@ export const adminRouter = Router();
 adminRouter.use(authenticate, requireAdmin);
 
 productsRouter.get('/', async (req, res) => {
-  res.json(await listProducts());
+  res.json(await listFilteredProducts(req.query));
 });
 
 productsRouter.get('/:id', async (req, res) => {

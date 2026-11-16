@@ -9,6 +9,8 @@ import {
   findProductPhotos,
   findProductReferences,
   findProducts,
+  findFilteredProducts,
+  findFilteredProductCount,
   findProductVariantsForUpdate,
   findProductVersionForUpdate,
   findVariantStockForUpdate,
@@ -16,7 +18,9 @@ import {
   updateProduct,
   updateProductVariant,
   updateStock,
+  listQuery
 } from '../repositories/products.repository.js';
+import { z } from 'zod';
 import { httpError } from '../validation.js';
 
 function normalize(product, admin = false) {
@@ -27,6 +31,66 @@ function normalize(product, admin = false) {
     stock: Number(admin ? product.stock : product.stock_disponible),
     cantidad_variantes: Number(product.cantidad_variantes),
   };
+}
+
+export async function listFilteredProducts(query)
+{
+  const q = z
+    .object({
+      pagina: z.coerce.number().int().min(1).max(100000).default(1),
+      buscar: z.string().trim().max(150).default(''),
+      categoria: z.string().trim().max(100).default(''),
+      orden: z.enum(['nombre', 'menor', 'mayor']).default('nombre'),
+      solo_stock: z.enum(['true', 'false']).default('false'),
+    })
+    .parse(query);
+  // Los filtros se aplican antes de contar y paginar; los valores son parámetros SQL.
+
+  const {from, params} = buildQueryFrom(q);
+
+  const [count] = await findFilteredProductCount(from, params);
+  const total = Number(count.total),
+    paginas = Math.max(1, Math.ceil(total / 6));
+
+  const pagina = Math.min(q.pagina, paginas);
+
+  // La columna de orden sale de una lista cerrada; ID desempata precios y nombres iguales.
+
+  const order = {
+    nombre: 'nombre ASC,id ASC',
+    menor: 'precio ASC,id ASC',
+    mayor: 'precio DESC,id ASC',
+  }[q.orden];
+
+  const rows = await findFilteredProducts(from, order, pagina, params);
+
+  // Las categorías no dependen de la página ni de los filtros seleccionados.
+  const [categories] = await pool.execute(
+    'SELECT DISTINCT c.nombre FROM categorias c JOIN productos p ON p.categoria_id=c.id WHERE p.activo=1 ORDER BY c.nombre',
+  );
+  return {
+    items: rows.map((p) => normalize(p)),
+    total,
+    pagina,
+    paginas,
+    por_pagina: 6,
+    categorias: categories.map((c) => c.nombre),
+  }
+}
+
+function buildQueryFrom(q) {
+  const conditions = ['activo=1'],
+    params = [];
+  if (q.buscar) {
+    conditions.push("LOCATE(?, CONCAT_WS(' ',nombre,descripcion,clasificacion))>0");
+    params.push(q.buscar);
+  }
+  if (q.categoria) {
+    conditions.push('clasificacion=?');
+    params.push(q.categoria);
+  }
+  if (q.solo_stock === 'true') conditions.push('stock_disponible>0');
+  return { from: `FROM (${listQuery}) catalogo WHERE ${conditions.join(' AND ')}`, params: params };
 }
 
 export async function listProducts(admin = false, db = pool) {

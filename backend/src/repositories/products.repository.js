@@ -1,6 +1,6 @@
 import { pool } from '../db.js';
 
-const listQuery = `SELECT p.*, c.nombre AS clasificacion,
+export const listQuery = `SELECT p.*, c.nombre AS clasificacion,
   COALESCE((SELECT SUM(e.cantidad) FROM variantes_producto v
     JOIN existencias e ON e.variante_id = v.id
     JOIN ubicaciones u ON u.id = e.ubicacion_id
@@ -12,6 +12,26 @@ const listQuery = `SELECT p.*, c.nombre AS clasificacion,
 export async function findProducts({ admin = false, db = pool } = {}) {
   const [rows] = await db.execute(
     `${listQuery} ${admin ? '' : 'WHERE p.activo = 1'} ORDER BY p.id DESC`,
+  );
+  return rows;
+}
+
+export async function findFilteredProductCount(from, params) {
+  const [rows]  = await pool.execute(`SELECT COUNT(*) total ${from}`, params);
+  return rows;
+}
+
+export async function findFilteredProducts(from, order, pagina, params){
+  const [rows] = await pool.execute(
+    `SELECT * ${from} ORDER BY ${order} LIMIT 6 OFFSET ${(pagina - 1) * 6}`,
+    params,
+  );
+  return rows;
+}
+
+export async function findCategories(){
+  const [rows] = await pool.execute(
+    'SELECT DISTINCT c.nombre FROM categorias c JOIN productos p ON p.categoria_id=c.id WHERE p.activo=1 ORDER BY c.nombre',
   );
   return rows;
 }
