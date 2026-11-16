@@ -1,7 +1,7 @@
 import { app } from './app.js';
 import { config } from './config.js';
 import { pool } from './db.js';
-import { startAccountMailWorker } from './recovery.js';
+import { startAccountMailWorker } from './services/recovery.service.js';
 import { paymentService } from './payments.js';
 
 await pool.execute('SELECT 1');

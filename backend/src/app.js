@@ -12,7 +12,7 @@ import { transfersRouter } from './controllers/transfers.controller.js';
 import { summaryRouter } from './controllers/location-summary.controller.js';
 import { cartRouter } from './controllers/cart.controller.js';
 import { ordersRouter } from './controllers/orders.controller.js';
-import { recoveryRouter } from './recovery.js';
+import { recoveryRouter } from './controllers/recovery.controller.js';
 import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { paymentService } from './payments.js';
