@@ -1,19 +1,25 @@
 import express from 'express';
 import helmet from 'helmet';
 import { ZodError } from 'zod';
-import { authRouter, authenticate } from './auth.js';
-import { productsRouter, adminRouter } from './products.js';
+import { authRouter } from './controllers/auth.controller.js';
+import { authenticate } from './middlewares/auth.middleware.js';
+import { productsRouter, adminRouter } from './controllers/products.controller.js';
 import { pool } from './db.js';
-import { imageRouter, imagesDirectory } from './images.js';
-import { toolsRouter } from './admin-tools.js';
-import { transfersRouter } from './transfers.js';
-import { summaryRouter } from './location-summary.js';
-import { cartRouter } from './cart.js';
-import { ordersRouter } from './orders.js';
-import { recoveryRouter } from './recovery.js';
+import { imageRouter, imagesDirectory } from './controllers/images.controller.js';
+import { toolsRouter } from './controllers/admin-tools.controller.js';
+import { locationsRouter } from './controllers/locations.controller.js';
+import { transfersRouter } from './controllers/transfers.controller.js';
+import { summaryRouter } from './controllers/location-summary.controller.js';
+import { cartRouter } from './controllers/cart.controller.js';
+import { ordersRouter } from './controllers/orders.controller.js';
+import { recoveryRouter } from './controllers/recovery.controller.js';
+import {
+  paymentsAdmin,
+  paymentsRouter,
+  paymentsWebhook,
+} from './controllers/payments.controller.js';
 import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { paymentService } from './payments.js';
 
 export const app = express();
 app.disable('x-powered-by');
@@ -32,9 +38,9 @@ app.get('/api/auth/me', authenticate, (req, res) => res.json({ usuario: req.user
 app.use('/api/productos', productsRouter);
 app.use('/api/carrito', cartRouter);
 app.use('/api/pedidos', ordersRouter);
-app.use('/api/pedidos', paymentService.router);
-app.use('/api/pagos/mercadopago/webhook', paymentService.webhook);
-app.use('/api/admin', paymentService.admin);
+app.use('/api/pedidos', paymentsRouter);
+app.use('/api/pagos/mercadopago/webhook', paymentsWebhook);
+app.use('/api/admin', paymentsAdmin);
 app.use(
   '/api/imagenes',
   express.static(imagesDirectory, {
@@ -46,6 +52,7 @@ app.use(
 );
 app.use('/api/admin', imageRouter);
 app.use('/api/admin', toolsRouter);
+app.use('/api/admin', locationsRouter);
 app.use('/api/admin', transfersRouter);
 app.use('/api/admin', summaryRouter);
 app.use('/api/admin', adminRouter);

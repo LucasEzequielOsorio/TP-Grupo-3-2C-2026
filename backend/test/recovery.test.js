@@ -4,7 +4,7 @@ import { randomUUID, createHash } from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import { app } from '../src/app.js';
 import { pool } from '../src/db.js';
-import { processAccountMail } from '../src/recovery.js';
+import { processAccountMail } from '../src/services/recovery.service.js';
 
 test('Recuperación: respuesta neutra, hash, vencimiento, uso único, sesiones y reintentos SMTP', async () => {
   const email = 'reset-' + randomUUID() + '@example.invalid';

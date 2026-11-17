@@ -1,8 +1,8 @@
 import { app } from './app.js';
 import { config } from './config.js';
 import { pool } from './db.js';
-import { startAccountMailWorker } from './recovery.js';
-import { paymentService } from './payments.js';
+import { startAccountMailWorker } from './services/recovery.service.js';
+import { paymentService } from './services/payments.service.js';
 
 await pool.execute('SELECT 1');
 const server = app.listen(config.port, config.host);

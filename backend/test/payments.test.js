@@ -5,10 +5,14 @@ import express from 'express';
 import jwt from 'jsonwebtoken';
 import { pool } from '../src/db.js';
 import { config } from '../src/config.js';
-import { ordersRouter } from '../src/orders.js';
-import { productsRouter, adminRouter } from '../src/products.js';
-import { transfersRouter } from '../src/transfers.js';
-import { createPaymentService } from '../src/payments.js';
+import { ordersRouter } from '../src/controllers/orders.controller.js';
+import {
+  productsRouter,
+  adminRouter,
+} from '../src/controllers/products.controller.js';
+import { transfersRouter } from '../src/controllers/transfers.controller.js';
+import { createPaymentController } from '../src/controllers/payments.controller.js';
+import { createPaymentService } from '../src/services/payments.service.js';
 
 test('Mercado Pago: reservas, concurrencia, firma, aprobación única, cancelación y pagos tardíos', async () => {
   const tag = 'MP-' + randomUUID(),
@@ -54,15 +58,16 @@ test('Mercado Pago: reservas, concurrencia, firma, aprobación única, cancelaci
     },
   };
   const service = createPaymentService(provider);
+  const paymentController = createPaymentController(service);
   const app = express();
   app.use(express.json());
   app.use('/api/pedidos', ordersRouter);
-  app.use('/api/pedidos', service.router);
+  app.use('/api/pedidos', paymentController.router);
   app.use('/api/productos', productsRouter);
   app.use('/api/admin', adminRouter);
   app.use('/api/admin', transfersRouter);
-  app.use('/api/admin', service.admin);
-  app.use('/api/hook', service.webhook);
+  app.use('/api/admin', paymentController.admin);
+  app.use('/api/hook', paymentController.webhook);
   app.use((e, req, res, next) => res.status(e.status || 500).json({ mensaje: e.message }));
   const server = app.listen(0, '127.0.0.1');
   await new Promise((r) => server.once('listening', r));
