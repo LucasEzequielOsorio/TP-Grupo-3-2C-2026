@@ -2,7 +2,6 @@ import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
 import { pool } from '../db.js';
 import { httpError, parseId } from '../validation.js';
 import { getOrderDetail } from './orders.service.js';
-import { finishReservation } from '../reservations.js';
 import { mercadoPago, checkoutUrl } from '../mercadopago.js';
 import {
   cancelOrder,
@@ -14,11 +13,15 @@ import {
   findCheckoutByPedidoId,
   findCheckoutByPedidoIdForUpdate,
   findCheckoutByReference,
+  findActiveReservations,
   findNextPaymentNotification,
   findOrderByIdAndUserForUpdate,
   findOrderByIdForUpdate,
   findPaymentByIdForUpdate,
   getOrderTotal,
+  incrementReservationProductVersions,
+  insertReservationSaleMovement,
+  lockReservationInventory,
   listPaymentsNeedingReview,
   listExpiredOrders,
   listRecentCheckouts,
@@ -29,6 +32,8 @@ import {
   savePaymentRecord,
   setOrderPaymentReview,
   setOrderPaymentStatus,
+  updateReservationInventory,
+  updateReservationStatus,
   updateCheckoutRetryState,
   updateCheckoutState,
   withPaymentTransaction,
@@ -68,6 +73,25 @@ function validSignature(req, secret) {
 }
 
 export function createPaymentService(provider = mercadoPago) {
+  async function finishReservation(db, order, consume = false) {
+    const rows = await findActiveReservations(db, order.id);
+    if (!rows.length) return false;
+    const products = [...new Set(rows.map((r) => r.producto_id))].sort((a, b) => a - b);
+    const variants = [...new Set(rows.map((r) => r.variante_id))].sort((a, b) => a - b);
+    const locations = [...new Set(rows.map((r) => r.ubicacion_id))].sort((a, b) => a - b);
+
+    await lockReservationInventory(db, products, variants, locations);
+    for (const reservation of rows) {
+      if (!(await updateReservationInventory(db, reservation, consume)))
+        throw httpError(409, 'La reserva de stock requiere revisión');
+      if (consume) await insertReservationSaleMovement(db, reservation, order);
+    }
+
+    await updateReservationStatus(db, order.id, consume ? 'consumida' : 'liberada');
+    await incrementReservationProductVersions(db, products);
+    return true;
+  }
+
   async function applyPayment(payment) {
     if (!/^\d{1,100}$/.test(String(payment.id)) || !payment.external_reference)
       throw httpError(422, 'Pago sin referencia válida');

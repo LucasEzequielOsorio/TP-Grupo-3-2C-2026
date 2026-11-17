@@ -1,7 +1,94 @@
 import { pool, transaction } from '../db.js';
 
+const marks = (values) => values.map(() => '?').join(',');
+
 export function withPaymentTransaction(work) {
   return transaction(work);
+}
+
+export async function findActiveReservations(db, orderId) {
+  const [rows] = await db.execute(
+    "SELECT r.*,v.producto_id FROM reservas_pedido r JOIN variantes_producto v ON v.id=r.variante_id WHERE r.pedido_id=? AND r.estado='activa' ORDER BY r.variante_id,r.ubicacion_id",
+    [orderId],
+  );
+  return rows;
+}
+
+export async function lockReservationInventory(db, productIds, variantIds, locationIds) {
+  await db.execute(
+    'SELECT id FROM productos WHERE id IN (' + marks(productIds) + ') ORDER BY id FOR UPDATE',
+    productIds,
+  );
+  await db.execute(
+    'SELECT id FROM variantes_producto WHERE id IN (' +
+      marks(variantIds) +
+      ') ORDER BY id FOR UPDATE',
+    variantIds,
+  );
+  await db.execute(
+    'SELECT id FROM ubicaciones WHERE id IN (' + marks(locationIds) + ') ORDER BY id FOR SHARE',
+    locationIds,
+  );
+  await db.execute(
+    'SELECT * FROM existencias WHERE variante_id IN (' +
+      marks(variantIds) +
+      ') AND ubicacion_id IN (' +
+      marks(locationIds) +
+      ') ORDER BY variante_id,ubicacion_id FOR UPDATE',
+    [...variantIds, ...locationIds],
+  );
+}
+
+export async function updateReservationInventory(db, reservation, consume) {
+  const [changed] = await db.execute(
+    consume
+      ? 'UPDATE existencias SET cantidad=cantidad-?,reservada=reservada-? WHERE variante_id=? AND ubicacion_id=? AND reservada>=? AND cantidad>=?'
+      : 'UPDATE existencias SET reservada=reservada-? WHERE variante_id=? AND ubicacion_id=? AND reservada>=?',
+    consume
+      ? [
+          reservation.cantidad,
+          reservation.cantidad,
+          reservation.variante_id,
+          reservation.ubicacion_id,
+          reservation.cantidad,
+          reservation.cantidad,
+        ]
+      : [
+          reservation.cantidad,
+          reservation.variante_id,
+          reservation.ubicacion_id,
+          reservation.cantidad,
+        ],
+  );
+  return changed.affectedRows === 1;
+}
+
+export async function insertReservationSaleMovement(db, reservation, order) {
+  await db.execute(
+    "INSERT INTO movimientos_stock(variante_id,ubicacion_id,cantidad,motivo,usuario_id,pedido_id,observacion) VALUES (?,?,?,'venta',?,?,?)",
+    [
+      reservation.variante_id,
+      reservation.ubicacion_id,
+      -reservation.cantidad,
+      order.usuario_id,
+      order.id,
+      'Pago verificado por Mercado Pago',
+    ],
+  );
+}
+
+export async function updateReservationStatus(db, orderId, status) {
+  await db.execute("UPDATE reservas_pedido SET estado=? WHERE pedido_id=? AND estado='activa'", [
+    status,
+    orderId,
+  ]);
+}
+
+export async function incrementReservationProductVersions(db, productIds) {
+  await db.execute(
+    'UPDATE productos SET version=version+1 WHERE id IN (' + marks(productIds) + ')',
+    productIds,
+  );
 }
 
 export async function findCheckoutByPedidoId(db = pool, pedidoId) {
