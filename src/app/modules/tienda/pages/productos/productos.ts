@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { TiendaNav } from '../../components/tienda-nav';
 import { DatosProducto } from '../../interfaces/datos-producto';
 import { ProductCard } from '../../components/product-card/product-card';
+import { CarruselDestacados } from '../../components/carrusel-destacados/carrusel-destacados.component';
 import { TiendaService } from '../../../../api/services/tienda.service';
 import { Router, RouterLink } from '@angular/router';
 import { Subject, Subscription, debounceTime } from 'rxjs';
@@ -10,7 +11,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DestroyRef } from '@angular/core';
 
 @Component({
-  imports: [ProductCard, FormsModule, TiendaNav, RouterLink],
+  imports: [ProductCard, CarruselDestacados, FormsModule, TiendaNav, RouterLink],
   selector: 'app-productos',
   styleUrl: '../tienda.css',
   templateUrl: './productos.html',
