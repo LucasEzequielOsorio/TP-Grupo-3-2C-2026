@@ -50,6 +50,17 @@ app.use(
     immutable: true,
   }),
 );
+// Fotos de los productos de demo (008-productos-demo.sql). Van versionadas en el repo porque
+// backend/uploads, donde se guardan las fotos subidas desde el panel, no se sube a Git.
+app.use(
+  '/api/imagenes',
+  express.static(fileURLToPath(new URL('../demo-images/', import.meta.url)), {
+    dotfiles: 'deny',
+    index: false,
+    maxAge: '1y',
+    immutable: true,
+  }),
+);
 app.use('/api/admin', imageRouter);
 app.use('/api/admin', toolsRouter);
 app.use('/api/admin', locationsRouter);
