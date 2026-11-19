@@ -46,6 +46,9 @@ Cambiar o quitar una imagen actualiza el producto al guardar. No borra archivos 
 | PUT | /api/auth/cuenta | Edición de la cuenta autenticada |
 | GET | /api/productos | Productos activos |
 | GET | /api/productos/:id | Producto activo y variantes activas |
+| GET | /api/favoritos | Productos favoritos del usuario autenticado |
+| POST | /api/favoritos/:productoId | Agregar producto activo a favoritos |
+| DELETE | /api/favoritos/:productoId | Quitar producto de favoritos |
 | GET | /api/admin/catalogos | Admin |
 | GET | /api/admin/productos | Admin, incluye inactivos |
 | GET | /api/admin/productos/:id | Admin |
