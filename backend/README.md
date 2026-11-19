@@ -134,6 +134,14 @@ Copiar `.env` solamente si no existe. Las credenciales de ejemplo son para desar
 
 Los archivos `sql/001-schema.sql` y `sql/002-seed.sql` se ejecutan automáticamente al inicializar un volumen vacío. Reiniciar el contenedor no vuelve a ejecutar estos scripts ni borra datos. Para cambios posteriores del esquema se deben agregar migraciones; editar un script inicial no modifica una base ya creada.
 
+### Productos de demo
+
+`sql/008-productos-demo.sql` carga 12 productos más (remeras, buzos, pantalones, camperas y accesorios), con talles, colores, stock en el depósito central y una foto por color. También agrega fotos a los 3 productos del seed original. Con eso el catálogo llega a 15 productos y la paginación (6 por página) tiene 3 páginas.
+
+- En una base nueva se ejecuta solo, junto con los demás scripts de `sql/`.
+- En una base que ya existe se aplica con `node backend/scripts/migrate.js`. El script se puede ejecutar varias veces: no repite productos ni variantes, no usa ids fijos y no pisa fotos de productos que ya tienen.
+- Las fotos están en `backend/demo-images/` y se sirven en `/api/imagenes/<archivo>.webp`, igual que las que se suben desde el panel (esas van a `backend/uploads/`, que no se sube a Git). Son ilustraciones de prendas hechas para la demo; se pueden reemplazar desde el panel de administración.
+
 Conexión desde Workbench u otro cliente:
 
 - Host: `127.0.0.1`

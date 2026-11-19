@@ -80,6 +80,13 @@ try {
     .map((s) => s.trim())
     .filter(Boolean))
     await pool.query(statement);
+  // Productos de demo con fotos: idempotente, no pisa productos ya cargados.
+  const demoSql = await readFile(new URL('../sql/008-productos-demo.sql', import.meta.url), 'utf8');
+  for (const statement of demoSql
+    .split(';')
+    .map((s) => s.trim())
+    .filter(Boolean))
+    await pool.query(statement);
   const [reviewColumn] = await pool.query("SHOW COLUMNS FROM checkout_pedidos LIKE 'revisado_en'");
   if (!reviewColumn.length)
     await pool.query('ALTER TABLE checkout_pedidos ADD COLUMN revisado_en DATETIME NULL');
