@@ -74,12 +74,6 @@ try {
     .map((s) => s.trim())
     .filter(Boolean))
     await pool.query(statement);
-  const favoritesSql = await readFile(new URL('../sql/008-favoritos.sql', import.meta.url), 'utf8');
-  for (const statement of favoritesSql
-    .split(';')
-    .map((s) => s.trim())
-    .filter(Boolean))
-    await pool.query(statement);
   // Productos de demo con fotos: idempotente, no pisa productos ya cargados.
   const demoSql = await readFile(new URL('../sql/008-productos-demo.sql', import.meta.url), 'utf8');
   for (const statement of demoSql
@@ -90,7 +84,7 @@ try {
   const [reviewColumn] = await pool.query("SHOW COLUMNS FROM checkout_pedidos LIKE 'revisado_en'");
   if (!reviewColumn.length)
     await pool.query('ALTER TABLE checkout_pedidos ADD COLUMN revisado_en DATETIME NULL');
-  console.log('Esquema actualizado: cuentas, inventario, recuperación, reservas, pagos y favoritos.');
+  console.log('Esquema actualizado: cuentas, inventario, recuperación, reservas y pagos.');
 } finally {
   await pool.end();
 }

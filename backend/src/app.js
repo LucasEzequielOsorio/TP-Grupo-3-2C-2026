@@ -11,7 +11,6 @@ import { locationsRouter } from './controllers/locations.controller.js';
 import { transfersRouter } from './controllers/transfers.controller.js';
 import { summaryRouter } from './controllers/location-summary.controller.js';
 import { cartRouter } from './controllers/cart.controller.js';
-import { favoritosRouter } from './controllers/favoritos.controller.js';
 import { ordersRouter } from './controllers/orders.controller.js';
 import { recoveryRouter } from './controllers/recovery.controller.js';
 import {
@@ -38,7 +37,6 @@ app.use('/api/auth', recoveryRouter);
 app.get('/api/auth/me', authenticate, (req, res) => res.json({ usuario: req.user }));
 app.use('/api/productos', productsRouter);
 app.use('/api/carrito', cartRouter);
-app.use('/api/favoritos', favoritosRouter);
 app.use('/api/pedidos', ordersRouter);
 app.use('/api/pedidos', paymentsRouter);
 app.use('/api/pagos/mercadopago/webhook', paymentsWebhook);
