@@ -1,0 +1,37 @@
+<app-tienda-nav />
+<main class="shop-main">
+  <nav class="breadcrumbs" aria-label="Ubicación">
+    <a routerLink="/tienda/productos">Colección</a><span>/</span><span>Mis favoritos</span>
+  </nav>
+  <span class="eyebrow">TU LISTA PERSONAL</span>
+  <h1>Mis favoritos</h1>
+  <p>Guardá las prendas que te gustan para encontrarlas fácilmente.</p>
+  @if (error()) {
+    <div class="shop-empty" role="alert">
+      <p>{{ error() }}</p>
+      <button class="shop-button dark" type="button" (click)="cargar()" [disabled]="cargando()">
+        Volver a intentar
+      </button>
+    </div>
+  } @else if (cargando()) {
+    <div class="shop-empty" role="status">Cargando tus favoritos…</div>
+  } @else if (productos().length) {
+    <section class="product-grid" aria-label="Productos favoritos">
+      @for (producto of productos(); track producto.id) {
+        <app-product-card
+          [producto]="producto"
+          [favorito]="true"
+          [favoritoDeshabilitado]="productosEnProceso().has(producto.id)"
+          (favoritoCambiado)="quitarFavorito($event)"
+          (productoEvent)="verProducto(producto.id)"
+        />
+      }
+    </section>
+  } @else {
+    <div class="shop-empty">
+      <h2>Todavía no guardaste favoritos</h2>
+      <p>Cuando encuentres una prenda que te guste, tocá el corazón para guardarla acá.</p>
+      <a class="shop-button dark" routerLink="/tienda/productos">Explorar la colección</a>
+    </div>
+  }
+</main>

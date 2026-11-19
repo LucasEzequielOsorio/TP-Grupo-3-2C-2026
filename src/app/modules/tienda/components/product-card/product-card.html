@@ -1,23 +1,46 @@
 @if (producto(); as p) {
   <article>
-    <button
-      class="image-button"
-      type="button"
-      (click)="verProducto()"
-      [attr.aria-label]="'Ver ' + p.nombre"
-    >
-      @if (p.imagen_url && !imagenError()) {
-        <img [src]="p.imagen_url" [alt]="p.nombre" (error)="imagenError.set(true)" />
-      } @else {
-        <svg viewBox="0 0 200 220" aria-hidden="true">
+    <div class="contenedor-imagen">
+      <button
+        class="image-button"
+        type="button"
+        (click)="verProducto()"
+        [attr.aria-label]="'Ver ' + p.nombre"
+      >
+        @if (p.imagen_url && !imagenError()) {
+          <img [src]="p.imagen_url" [alt]="p.nombre" (error)="imagenError.set(true)" />
+        } @else {
+          <svg viewBox="0 0 200 220" aria-hidden="true">
+            <path
+              d="m67 25-30 13L5 89l37 22 22-25v111h72V86l22 25 37-22-32-51-30-13c-6 26-60 26-66 0Z"
+              fill="currentColor"
+            />
+          </svg>
+        }
+        <span class="image-label">{{ p.stock > 0 ? 'Ver detalles ↗' : 'Agotado' }}</span>
+      </button>
+      <button
+        class="boton-favorito"
+        type="button"
+        [class.favorito-activo]="favorito()"
+        [disabled]="favoritoDeshabilitado()"
+        [attr.aria-pressed]="favorito()"
+        [attr.aria-label]="
+          favorito() ? 'Quitar ' + p.nombre + ' de favoritos' : 'Agregar ' + p.nombre + ' a favoritos'
+        "
+        (click)="cambiarFavorito(p.id)"
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true">
           <path
-            d="m67 25-30 13L5 89l37 22 22-25v111h72V86l22 25 37-22-32-51-30-13c-6 26-60 26-66 0Z"
-            fill="currentColor"
+            d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.8-7.5 1.1-1.1a5.5 5.5 0 0 0-.1-7.8Z"
+            [attr.fill]="favorito() ? 'currentColor' : 'none'"
           />
         </svg>
-      }
-      <span class="image-label">{{ p.stock > 0 ? 'Ver detalles ↗' : 'Agotado' }}</span>
-    </button>
+        <span class="solo-lectores-pantalla">{{
+          favorito() ? 'Quitar de favoritos' : 'Agregar a favoritos'
+        }}</span>
+      </button>
+    </div>
     <div class="card-meta">
       <span>{{ p.clasificacion || 'Esenciales' }}</span
       ><span [class.sold-out]="p.stock <= 0">{{ p.stock > 0 ? 'Disponible' : 'Sin stock' }}</span>

@@ -9,6 +9,7 @@ import { Router, RouterLink } from '@angular/router';
 import { Subject, Subscription, debounceTime } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DestroyRef } from '@angular/core';
+import { UsuarioService } from '../../../../api/services/usuario.service';
 
 @Component({
   imports: [ProductCard, CarruselDestacados, FormsModule, TiendaNav, RouterLink],
@@ -18,8 +19,13 @@ import { DestroyRef } from '@angular/core';
 })
 export class Productos implements OnInit {
   tiendaService = inject(TiendaService);
+  auth = inject(UsuarioService);
   router = inject(Router);
   productos = signal<DatosProducto[]>([]);
+  idsFavoritos = signal<Set<number>>(new Set());
+  favoritosEnProceso = signal<Set<number>>(new Set());
+  cargandoFavoritos = signal(false);
+  errorFavoritos = signal('');
   cargando = signal(true);
   error = signal('');
   busqueda = signal('');
@@ -61,6 +67,78 @@ export class Productos implements OnInit {
 
   ngOnInit() {
     this.cargar();
+    this.cargarFavoritos();
+  }
+  cargarFavoritos() {
+    if (!this.auth.isLogged()) {
+      this.idsFavoritos.set(new Set());
+      return;
+    }
+    this.cargandoFavoritos.set(true);
+    this.errorFavoritos.set('');
+    this.tiendaService.obtenerFavoritos().subscribe({
+      next: (productos) => {
+        this.idsFavoritos.set(new Set(productos.map((producto) => producto.id)));
+        this.cargandoFavoritos.set(false);
+      },
+      error: (error) => {
+        this.cargandoFavoritos.set(false);
+        if (error.status === 401) {
+          this.router.navigate(['/bienvenido/login'], {
+            queryParams: { returnUrl: this.router.url },
+          });
+          return;
+        }
+        this.errorFavoritos.set(
+          error.error?.mensaje || 'No pudimos cargar tus favoritos. Intentá de nuevo.',
+        );
+      },
+    });
+  }
+  cambiarFavorito(productoId: number) {
+    if (!this.auth.isLogged()) {
+      this.router.navigate(['/bienvenido/login'], {
+        queryParams: { returnUrl: this.router.url },
+      });
+      return;
+    }
+    if (this.favoritosEnProceso().has(productoId)) return;
+
+    this.errorFavoritos.set('');
+    this.favoritosEnProceso.update((ids) => new Set(ids).add(productoId));
+    const solicitud = this.idsFavoritos().has(productoId)
+      ? this.tiendaService.eliminarFavorito(productoId)
+      : this.tiendaService.agregarFavorito(productoId);
+    solicitud.subscribe({
+      next: (respuesta) => {
+        this.idsFavoritos.update((ids) => {
+          const actualizados = new Set(ids);
+          if (respuesta.favorito) actualizados.add(productoId);
+          else actualizados.delete(productoId);
+          return actualizados;
+        });
+        this.liberarFavorito(productoId);
+      },
+      error: (error) => {
+        this.liberarFavorito(productoId);
+        if (error.status === 401) {
+          this.router.navigate(['/bienvenido/login'], {
+            queryParams: { returnUrl: this.router.url },
+          });
+          return;
+        }
+        this.errorFavoritos.set(
+          error.error?.mensaje || 'No pudimos actualizar tus favoritos. Intentá de nuevo.',
+        );
+      },
+    });
+  }
+  private liberarFavorito(productoId: number) {
+    this.favoritosEnProceso.update((ids) => {
+      const actualizados = new Set(ids);
+      actualizados.delete(productoId);
+      return actualizados;
+    });
   }
   cargar(pagina = 1) {
     // Cancelar la petición anterior impide que una respuesta vieja reemplace filtros recientes.

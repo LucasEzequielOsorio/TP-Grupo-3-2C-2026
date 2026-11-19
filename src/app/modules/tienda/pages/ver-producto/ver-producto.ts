@@ -7,6 +7,7 @@ import { RouterLink, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { UsuarioService } from '../../../../api/services/usuario.service';
 import { VarianteTienda } from '../../interfaces/datos-producto';
+import { Subscription } from 'rxjs';
 
 @Component({
   imports: [CurrencyPipe, TiendaNav, RouterLink, FormsModule],
@@ -21,6 +22,10 @@ export class VerProducto {
   cantidad = signal(1);
   mensajeCarrito = signal('');
   errorCarrito = signal('');
+  esFavorito = signal(false);
+  cargandoFavorito = signal(false);
+  guardandoFavorito = signal(false);
+  errorFavorito = signal('');
   id = input<number, string | number | undefined>(undefined, { transform: numberAttribute });
   producto = signal<DatosProducto>({ id: -1, nombre: '', descripcion: '', precio: 0, stock: -1 });
   waitingForCarritoEvent = signal<boolean>(false);
@@ -76,6 +81,11 @@ export class VerProducto {
       const productoId = this.id();
       this.cargando.set(true);
       this.error.set('');
+      this.esFavorito.set(false);
+      this.cargandoFavorito.set(false);
+      this.guardandoFavorito.set(false);
+      this.errorFavorito.set('');
+      let solicitudFavoritos: Subscription | undefined;
       if (productoId === undefined || !Number.isInteger(productoId) || productoId <= 0) {
         this.cargando.set(false);
         this.error.set('La prenda que buscás no está disponible.');
@@ -90,13 +100,17 @@ export class VerProducto {
             (variantes.find((v) => this.unidades(v) > 0) || variantes[0])?.color_id || 0,
           );
           this.cargando.set(false);
+          solicitudFavoritos = this.cargarEstadoFavorito(productoId);
         },
         error: () => {
           this.cargando.set(false);
           this.error.set('No pudimos encontrar esta prenda. Puede que ya no esté disponible.');
         },
       });
-      onCleanup(() => subscription.unsubscribe());
+      onCleanup(() => {
+        subscription.unsubscribe();
+        solicitudFavoritos?.unsubscribe();
+      });
     });
   }
   disponible = computed(() => {
@@ -137,5 +151,56 @@ export class VerProducto {
         );
       },
     });
+  }
+  private cargarEstadoFavorito(productoId: number) {
+    if (!this.auth.isLogged()) return;
+    this.cargandoFavorito.set(true);
+    return this.tiendaService.obtenerFavoritos().subscribe({
+      next: (favoritos) => {
+        this.esFavorito.set(favoritos.some((producto) => producto.id === productoId));
+        this.cargandoFavorito.set(false);
+      },
+      error: (error) => {
+        this.cargandoFavorito.set(false);
+        if (error.status === 401) {
+          this.irAlLogin();
+          return;
+        }
+        this.errorFavorito.set(
+          error.error?.mensaje || 'No pudimos consultar tus favoritos. Intentá de nuevo.',
+        );
+      },
+    });
+  }
+  cambiarFavorito() {
+    if (!this.auth.isLogged()) {
+      this.irAlLogin();
+      return;
+    }
+    if (this.guardandoFavorito() || this.cargandoFavorito()) return;
+    this.guardandoFavorito.set(true);
+    this.errorFavorito.set('');
+    const solicitud = this.esFavorito()
+      ? this.tiendaService.eliminarFavorito(this.producto().id)
+      : this.tiendaService.agregarFavorito(this.producto().id);
+    solicitud.subscribe({
+      next: (respuesta) => {
+        this.esFavorito.set(respuesta.favorito);
+        this.guardandoFavorito.set(false);
+      },
+      error: (error) => {
+        this.guardandoFavorito.set(false);
+        if (error.status === 401) {
+          this.irAlLogin();
+          return;
+        }
+        this.errorFavorito.set(
+          error.error?.mensaje || 'No pudimos actualizar tus favoritos. Intentá de nuevo.',
+        );
+      },
+    });
+  }
+  private irAlLogin() {
+    this.router.navigate(['/bienvenido/login'], { queryParams: { returnUrl: this.router.url } });
   }
 }
