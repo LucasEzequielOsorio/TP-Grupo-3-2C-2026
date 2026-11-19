@@ -8,6 +8,7 @@ import { pendientesGuard } from './pendientes-guard';
 import { UbicacionesAdmin } from './pages/ubicaciones-admin';
 import { TransferenciasAdmin } from './pages/transferencias-admin';
 import { UbicacionResumen } from './pages/ubicacion-resumen';
+import { PagosAdmin } from './pages/pagos-admin';
 
 export const routes: Routes = [
   {
@@ -17,6 +18,7 @@ export const routes: Routes = [
     children: [
       { path: '', redirectTo: 'productos', pathMatch: 'full' },
       { path: 'productos', component: ProductosAdmin },
+      { path: 'pagos', component: PagosAdmin },
       { path: 'productos/nuevo', component: ProductoEditor, canDeactivate: [pendientesGuard] },
       { path: 'productos/:id/editar', component: ProductoEditor, canDeactivate: [pendientesGuard] },
       { path: 'alertas', component: InventarioAdmin, data: { modo: 'alertas' } },

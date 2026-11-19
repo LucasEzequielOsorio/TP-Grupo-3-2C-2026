@@ -1,29 +1,46 @@
 import express from 'express';
 import helmet from 'helmet';
 import { ZodError } from 'zod';
-import { authRouter, authenticate } from './auth.js';
-import { productsRouter, adminRouter } from './products.js';
+import { authRouter } from './controllers/auth.controller.js';
+import { authenticate } from './middlewares/auth.middleware.js';
+import { productsRouter, adminRouter } from './controllers/products.controller.js';
 import { pool } from './db.js';
-import { imageRouter, imagesDirectory } from './images.js';
-import { toolsRouter } from './admin-tools.js';
-import { transfersRouter } from './transfers.js';
-import { summaryRouter } from './location-summary.js';
-import { cartRouter } from './cart.js';
-import { ordersRouter } from './orders.js';
+import { imageRouter, imagesDirectory } from './controllers/images.controller.js';
+import { toolsRouter } from './controllers/admin-tools.controller.js';
+import { locationsRouter } from './controllers/locations.controller.js';
+import { transfersRouter } from './controllers/transfers.controller.js';
+import { summaryRouter } from './controllers/location-summary.controller.js';
+import { cartRouter } from './controllers/cart.controller.js';
+import { ordersRouter } from './controllers/orders.controller.js';
+import { recoveryRouter } from './controllers/recovery.controller.js';
+import {
+  paymentsAdmin,
+  paymentsRouter,
+  paymentsWebhook,
+} from './controllers/payments.controller.js';
+import { existsSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 export const app = express();
 app.disable('x-powered-by');
+// El túnel llega por loopback; conserva la IP de origen para los límites de intentos.
+if(process.env.SERVE_FRONTEND==='true')app.set('trust proxy','loopback');
 app.use(helmet());
 app.use(express.json({ limit: '256kb' }));
 app.get('/api/health', async (req, res) => {
   await pool.execute('SELECT 1');
   res.json({ estado: 'ok' });
 });
+// Punto central de rutas: cada módulo aplica su autenticación y permisos correspondientes.
 app.use('/api/auth', authRouter);
+app.use('/api/auth', recoveryRouter);
 app.get('/api/auth/me', authenticate, (req, res) => res.json({ usuario: req.user }));
 app.use('/api/productos', productsRouter);
 app.use('/api/carrito', cartRouter);
 app.use('/api/pedidos', ordersRouter);
+app.use('/api/pedidos', paymentsRouter);
+app.use('/api/pagos/mercadopago/webhook', paymentsWebhook);
+app.use('/api/admin', paymentsAdmin);
 app.use(
   '/api/imagenes',
   express.static(imagesDirectory, {
@@ -35,9 +52,29 @@ app.use(
 );
 app.use('/api/admin', imageRouter);
 app.use('/api/admin', toolsRouter);
+app.use('/api/admin', locationsRouter);
 app.use('/api/admin', transfersRouter);
 app.use('/api/admin', summaryRouter);
 app.use('/api/admin', adminRouter);
+if (process.env.SERVE_FRONTEND === 'true') {
+  const frontend = fileURLToPath(
+    new URL('../../dist/TP-Grupo-3-2C-2026/browser/', import.meta.url),
+  );
+  const index = frontend + 'index.html';
+  if (!existsSync(index))
+    throw new Error('Compilar Angular con npm run build antes de iniciar preview');
+  app.use(express.static(frontend, { dotfiles: 'deny', index: false }));
+  app.get('/{*path}', (req, res, next) => {
+    if (
+      req.path === '/api' ||
+      req.path.startsWith('/api/') ||
+      req.path.split('/').some((p) => p.startsWith('.'))
+    )
+      return next();
+    res.set('Cache-Control', 'no-store');
+    res.sendFile(index);
+  });
+}
 app.use((req, res) => res.status(404).json({ mensaje: 'Ruta no encontrada' }));
 app.use((error, req, res, next) => {
   if (error instanceof ZodError)

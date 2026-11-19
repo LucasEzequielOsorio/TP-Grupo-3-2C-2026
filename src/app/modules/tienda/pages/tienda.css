@@ -601,3 +601,15 @@ h1 > span {
     margin: 10px 0 0;
   }
 }
+.catalog-pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin: 32px 0;
+}
+.catalog-pagination button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
