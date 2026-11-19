@@ -119,3 +119,18 @@ button:disabled {
     margin-left: auto;
   }
 }
+@media (max-width: 420px) {
+  .cart-item {
+    flex-direction: column;
+  }
+  .cart-photo {
+    width: 100%;
+    height: 200px;
+  }
+  .cart-item > strong {
+    margin-left: 0;
+  }
+  .cart-summary {
+    padding: 20px;
+  }
+}
