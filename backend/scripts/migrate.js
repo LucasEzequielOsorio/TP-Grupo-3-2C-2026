@@ -74,10 +74,16 @@ try {
     .map((s) => s.trim())
     .filter(Boolean))
     await pool.query(statement);
+  const favoritesSql = await readFile(new URL('../sql/008-favoritos.sql', import.meta.url), 'utf8');
+  for (const statement of favoritesSql
+    .split(';')
+    .map((s) => s.trim())
+    .filter(Boolean))
+    await pool.query(statement);
   const [reviewColumn] = await pool.query("SHOW COLUMNS FROM checkout_pedidos LIKE 'revisado_en'");
   if (!reviewColumn.length)
     await pool.query('ALTER TABLE checkout_pedidos ADD COLUMN revisado_en DATETIME NULL');
-  console.log('Esquema actualizado: cuentas, inventario, recuperación, reservas y pagos.');
+  console.log('Esquema actualizado: cuentas, inventario, recuperación, reservas, pagos y favoritos.');
 } finally {
   await pool.end();
 }
