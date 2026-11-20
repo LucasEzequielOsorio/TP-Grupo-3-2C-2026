@@ -138,11 +138,6 @@
           >
             {{ waitingForCarritoEvent() ? 'Agregando…' : 'Agregar al carrito' }}
           </button>
-          @if (mensajeCarrito()) {
-            <p role="status">
-              {{ mensajeCarrito() }} <a routerLink="/tienda/carrito">Ver mi pedido →</a>
-            </p>
-          }
           @if (errorCarrito()) {
             <p role="alert">{{ errorCarrito() }}</p>
           }

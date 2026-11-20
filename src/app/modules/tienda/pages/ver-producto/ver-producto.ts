@@ -8,6 +8,7 @@ import { FormsModule } from '@angular/forms';
 import { UsuarioService } from '../../../../api/services/usuario.service';
 import { VarianteTienda } from '../../interfaces/datos-producto';
 import { Subscription } from 'rxjs';
+import { AvisoService } from '../../../../core/services/aviso.service';
 
 @Component({
   imports: [CurrencyPipe, TiendaNav, RouterLink, FormsModule],
@@ -17,10 +18,10 @@ import { Subscription } from 'rxjs';
 })
 export class VerProducto {
   tiendaService = inject(TiendaService);
+  private avisos = inject(AvisoService);
   auth = inject(UsuarioService);
   router = inject(Router);
   cantidad = signal(1);
-  mensajeCarrito = signal('');
   errorCarrito = signal('');
   esFavorito = signal(false);
   cargandoFavorito = signal(false);
@@ -62,7 +63,6 @@ export class VerProducto {
     return v?.existencias.reduce((sum, e) => sum + e.cantidad, 0) || 0;
   }
   elegirColor(id: number) {
-    this.mensajeCarrito.set('');
     this.errorCarrito.set('');
     this.cantidad.set(1);
     this.colorSeleccionado.set(id);
@@ -124,7 +124,6 @@ export class VerProducto {
     }
     const v = this.variante();
     if (!v || this.waitingForCarritoEvent()) return;
-    this.mensajeCarrito.set('');
     this.errorCarrito.set('');
     if (
       !Number.isInteger(this.cantidad()) ||
@@ -138,7 +137,7 @@ export class VerProducto {
     this.tiendaService.agregarAlCarrito(v.id, this.cantidad()).subscribe({
       next: () => {
         this.waitingForCarritoEvent.set(false);
-        this.mensajeCarrito.set('La prenda se agregó a tu carrito.');
+        this.avisos.mostrar('La prenda se agregó a tu carrito.');
       },
       error: (e) => {
         this.waitingForCarritoEvent.set(false);
@@ -187,6 +186,9 @@ export class VerProducto {
       next: (respuesta) => {
         this.esFavorito.set(respuesta.favorito);
         this.guardandoFavorito.set(false);
+        this.avisos.mostrar(
+          respuesta.favorito ? 'Agregaste la prenda a tus favoritos.' : 'Quitaste la prenda de favoritos.',
+        );
       },
       error: (error) => {
         this.guardandoFavorito.set(false);

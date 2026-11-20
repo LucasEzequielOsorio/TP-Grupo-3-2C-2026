@@ -4,6 +4,7 @@ import { DatosProducto } from '../../interfaces/datos-producto';
 import { TiendaService } from '../../../../api/services/tienda.service';
 import { TiendaNav } from '../../components/tienda-nav';
 import { ProductCard } from '../../components/product-card/product-card';
+import { AvisoService } from '../../../../core/services/aviso.service';
 
 @Component({
   imports: [RouterLink, TiendaNav, ProductCard],
@@ -13,6 +14,7 @@ import { ProductCard } from '../../components/product-card/product-card';
 })
 export class Favoritos {
   private tienda = inject(TiendaService);
+  private avisos = inject(AvisoService);
   private router = inject(Router);
   productos = signal<DatosProducto[]>([]);
   productosEnProceso = signal<Set<number>>(new Set());
@@ -50,6 +52,7 @@ export class Favoritos {
       next: () => {
         this.productos.update((productos) => productos.filter((producto) => producto.id !== productoId));
         this.liberarProducto(productoId);
+        this.avisos.mostrar('Quitaste la prenda de tus favoritos.');
       },
       error: (error) => {
         this.liberarProducto(productoId);

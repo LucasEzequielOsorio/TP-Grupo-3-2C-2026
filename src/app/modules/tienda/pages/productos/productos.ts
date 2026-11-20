@@ -10,6 +10,7 @@ import { Subject, Subscription, debounceTime } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DestroyRef } from '@angular/core';
 import { UsuarioService } from '../../../../api/services/usuario.service';
+import { AvisoService } from '../../../../core/services/aviso.service';
 
 @Component({
   imports: [ProductCard, CarruselDestacados, FormsModule, TiendaNav, RouterLink],
@@ -19,6 +20,7 @@ import { UsuarioService } from '../../../../api/services/usuario.service';
 })
 export class Productos implements OnInit {
   tiendaService = inject(TiendaService);
+  private avisos = inject(AvisoService);
   auth = inject(UsuarioService);
   router = inject(Router);
   productos = signal<DatosProducto[]>([]);
@@ -117,6 +119,9 @@ export class Productos implements OnInit {
           else actualizados.delete(productoId);
           return actualizados;
         });
+        this.avisos.mostrar(
+          respuesta.favorito ? 'Agregaste la prenda a tus favoritos.' : 'Quitaste la prenda de favoritos.',
+        );
         this.liberarFavorito(productoId);
       },
       error: (error) => {
