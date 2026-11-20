@@ -15,6 +15,7 @@ import { UsuarioService } from '../../../api/services/usuario.service';
       <a routerLink="/admin/ubicaciones" routerLinkActive="selected">Depósitos</a>
       <a routerLink="/admin/transferencias" routerLinkActive="selected">Transferencias</a>
       <a routerLink="/perfil/mi-cuenta">Mi cuenta</a>
+      <a routerLink="/admin/pagos" routerLinkActive="selected">Pagos</a>
     </div>
     <button type="button" (click)="salir()">Cerrar sesión</button>
   </nav>`,
@@ -87,8 +88,7 @@ export class AdminNav {
     this.auth.logout();
     this.router.navigate(['/bienvenido/login']).then((ok) => {
       if (!ok) {
-        if (token) localStorage.setItem('auth_token', token);
-        if (role) localStorage.setItem('user_role', role);
+        if (token) this.auth.guardarSesion(token, role);
       }
     });
   }

@@ -17,9 +17,19 @@ export interface LineaCarrito {
   activo: boolean;
   subtotal: number;
 }
+export interface CatalogoRespuesta {
+  items: DatosProducto[];
+  total: number;
+  pagina: number;
+  paginas: number;
+  por_pagina: number;
+  categorias: string[];
+}
 export interface PedidoResumen {
   id: number;
   estado: string;
+  pago_estado?: string;
+  reserva_hasta?: string | null;
   creado_en: string;
   total: number;
   unidades: number;
@@ -41,8 +51,45 @@ export interface CarritoRespuesta {
   total: number;
   unidades: number;
 }
+export interface RespuestaFavorito {
+  producto_id: number;
+  favorito: boolean;
+  creado?: boolean;
+}
 @Service()
 export class TiendaService {
+  obtenerFavoritos() {
+    return this.http.get<DatosProducto[]>('/api/favoritos', this.options);
+  }
+  agregarFavorito(productoId: number) {
+    return this.http.post<RespuestaFavorito>(
+      '/api/favoritos/' + productoId,
+      {},
+      this.options,
+    );
+  }
+  eliminarFavorito(productoId: number) {
+    return this.http.delete<RespuestaFavorito>('/api/favoritos/' + productoId, this.options);
+  }
+  iniciarPago(id: number) {
+    return this.http.post<{ checkout_url: string }>(
+      '/api/pedidos/' + id + '/pagar',
+      {},
+      this.options,
+    );
+  }
+  sincronizarPago(id: number) {
+    return this.http.post<PedidoDetalle>('/api/pedidos/' + id + '/sincronizar', {}, this.options);
+  }
+  cancelarPedido(id: number) {
+    return this.http.post<PedidoDetalle>('/api/pedidos/' + id + '/cancelar', {}, this.options);
+  }
+  pagosRevision() {
+    return this.http.get<{ id: number; email: string; pago_estado: string; total: number }[]>(
+      '/api/admin/pagos-revision',
+      this.options,
+    );
+  }
   getPedidos() {
     return this.http.get<PedidoResumen[]>('/api/pedidos', this.options);
   }
@@ -73,8 +120,14 @@ export class TiendaService {
   getCompras() {
     return of<DatosCompra[]>([]);
   }
-  getProductos() {
-    return this.http.get<DatosProducto[]>('/api/productos');
+  getProductos(params: {
+    pagina: number;
+    buscar: string;
+    categoria: string;
+    orden: string;
+    solo_stock: string;
+  }) {
+    return this.http.get<CatalogoRespuesta>('/api/productos', { params });
   }
   getProducto(id: number) {
     return this.http.get<DatosProducto>('/api/productos/' + id);

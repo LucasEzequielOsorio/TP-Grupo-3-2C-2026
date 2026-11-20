@@ -4,6 +4,7 @@ import { Productos } from './pages/productos/productos';
 import { VerProducto } from './pages/ver-producto/ver-producto';
 import { Carrito } from './pages/carrito/carrito';
 import { Pedidos } from './pages/mis-compras/pedidos';
+import { Favoritos } from './pages/favoritos/favoritos';
 export const tiendaRoutes: Routes = [
   {
     path: '',
@@ -19,6 +20,11 @@ export const tiendaRoutes: Routes = [
       {
         path: 'carrito',
         component: Carrito,
+        canActivate: [loggedGuard],
+      },
+      {
+        path: 'favoritos',
+        component: Favoritos,
         canActivate: [loggedGuard],
       },
       { path: 'pedidos', component: Pedidos, canActivate: [loggedGuard] },

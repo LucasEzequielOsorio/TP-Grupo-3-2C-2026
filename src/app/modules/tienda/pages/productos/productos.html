@@ -30,6 +30,7 @@
       <span class="hero-caption">MENOS VUELTAS.<br />MÁS ESTILO.</span>
     </div>
   </section>
+  <app-carrusel-destacados />
   <section id="coleccion" class="collection">
     <header class="collection-heading">
       <div>
@@ -44,7 +45,7 @@
           type="button"
           [class.selected]="categoria() === c"
           [attr.aria-pressed]="categoria() === c"
-          (click)="categoria.set(c)"
+          (click)="categoria.set(c); cargar(1)"
         >
           {{ c }}
         </button>
@@ -56,20 +57,27 @@
         aria-label="Buscar prendas"
         placeholder="Buscar una prenda…"
         [ngModel]="busqueda()"
-        (ngModelChange)="busqueda.set($event)"
+        (ngModelChange)="buscar($event)"
       /><label class="stock-check"
-        ><input type="checkbox" [ngModel]="soloStock()" (ngModelChange)="soloStock.set($event)" />
+        ><input
+          type="checkbox"
+          [ngModel]="soloStock()"
+          (ngModelChange)="soloStock.set($event); cargar(1)"
+        />
         Solo disponibles</label
       ><select
         aria-label="Ordenar productos"
         [ngModel]="orden()"
-        (ngModelChange)="orden.set($event)"
+        (ngModelChange)="orden.set($event); cargar(1)"
       >
         <option value="nombre">Ordenar por nombre</option>
         <option value="menor">Menor precio</option>
         <option value="mayor">Mayor precio</option>
       </select>
     </div>
+    @if (errorFavoritos()) {
+      <p class="error-favoritos" role="alert">{{ errorFavoritos() }}</p>
+    }
     @if (error()) {
       <div class="shop-empty" role="alert">
         <h3>No pudimos mostrar la colección</h3>
@@ -80,11 +88,18 @@
       <div class="shop-empty" role="status">Estamos preparando la colección…</div>
     } @else {
       <p class="results">
-        {{ visibles().length }} {{ visibles().length === 1 ? 'prenda' : 'prendas' }}
+        {{ total() }} {{ total() === 1 ? 'prenda' : 'prendas' }} · Página {{ pagina() }} de
+        {{ paginas() }}
       </p>
       <div class="product-grid">
         @for (p of visibles(); track p.id) {
-          <app-product-card [producto]="p" (productoEvent)="VerProducto(p.id)" />
+          <app-product-card
+            [producto]="p"
+            [favorito]="idsFavoritos().has(p.id)"
+            [favoritoDeshabilitado]="cargandoFavoritos() || favoritosEnProceso().has(p.id)"
+            (favoritoCambiado)="cambiarFavorito($event)"
+            (productoEvent)="VerProducto(p.id)"
+          />
         } @empty {
           <div class="shop-empty">
             <h3>No encontramos prendas para esa búsqueda</h3>
@@ -93,6 +108,21 @@
           </div>
         }
       </div>
+      @if (paginas() > 1) {
+        <nav class="catalog-pagination" aria-label="Páginas de la colección">
+          <button class="shop-button" (click)="cargar(pagina() - 1)" [disabled]="pagina() <= 1">
+            ← Anterior
+          </button>
+          <span aria-live="polite">Página {{ pagina() }} de {{ paginas() }}</span>
+          <button
+            class="shop-button"
+            (click)="cargar(pagina() + 1)"
+            [disabled]="pagina() >= paginas()"
+          >
+            Siguiente →
+          </button>
+        </nav>
+      }
     }
   </section>
   <footer class="shop-footer">

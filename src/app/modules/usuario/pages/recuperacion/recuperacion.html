@@ -1,0 +1,100 @@
+<div class="auth-shell">
+  <aside>
+    <a class="brand" routerLink="/">TRAMA<span>.</span></a>
+    <div class="hero">
+      <span>VOLVÉ A TU CUENTA</span>
+      <h1>Tu estilo.<br />Siempre con vos.</h1>
+      <p>Recuperá el acceso y seguí explorando.</p>
+    </div>
+    <small>TIENDA DE ROPA · HECHA PARA TODOS LOS DÍAS</small>
+  </aside>
+  <main>
+    <div class="auth-card">
+      <span class="eyebrow">SEGURIDAD DE TU CUENTA</span>
+      <h2>{{ restablecer ? 'Elegí una nueva contraseña' : '¿Olvidaste tu contraseña?' }}</h2>
+      @if (restablecer) {
+        @if (completo()) {
+          <div class="notice" role="status">{{ mensaje() }}</div>
+          <a class="primary-link" routerLink="/bienvenido/login">Iniciar sesión</a>
+        } @else if (verificando()) {
+          <div class="notice" role="status">Comprobando tu enlace…</div>
+        } @else if (falloVerificacion()) {
+          <div class="error" role="alert">{{ error() }}</div>
+          <button type="button" (click)="verificar()">Reintentar comprobación</button>
+        } @else if (!enlaceValido()) {
+          <div class="error" role="alert">
+            {{
+              error() ||
+                'El enlace no es válido. Abrí el enlace completo del correo o solicitá uno nuevo.'
+            }}
+          </div>
+          <a class="primary-link" routerLink="/bienvenido/recuperar">Solicitar otro enlace</a>
+        } @else {
+          <p>
+            Usá una contraseña que puedas recordar. Al guardarla se cerrarán tus sesiones
+            anteriores.
+          </p>
+          <form (ngSubmit)="guardar()">
+            <label for="recuperacion-password">Nueva contraseña</label>
+            <app-password-field
+              fieldId="recuperacion-password"
+              label="nueva contraseña"
+              [value]="password()"
+              (valueChange)="password.set($event)"
+              [disabled]="ocupado()"
+            />
+            <p class="hint">
+              Mínimo 8 caracteres, con mayúscula, minúscula y número. Se admiten símbolos. Máximo 72
+              bytes.
+            </p>
+            <label for="recuperacion-repeticion">Repetir nueva contraseña</label>
+            <app-password-field
+              fieldId="recuperacion-repeticion"
+              label="repetición de contraseña"
+              [value]="repeticion()"
+              (valueChange)="repeticion.set($event)"
+              [disabled]="ocupado()"
+            />
+            @if (errorPassword()) {
+              <p class="error" role="alert">{{ errorPassword() }}</p>
+            }
+            @if (error()) {
+              <p class="error" role="alert">{{ error() }}</p>
+            }
+            <button type="submit" [disabled]="ocupado() || !password() || !!errorPassword()">
+              {{ ocupado() ? 'Guardando…' : 'Guardar nueva contraseña' }}
+            </button>
+          </form>
+        }
+      } @else {
+        <p>Ingresá el email de tu cuenta. Te enviaremos un enlace válido por 15 minutos.</p>
+        <form #solicitud="ngForm" (ngSubmit)="solicitar()">
+          <label for="recuperacion-email">Email</label
+          ><input
+            id="recuperacion-email"
+            type="email"
+            name="email"
+            email
+            required
+            maxlength="254"
+            autocomplete="email"
+            [ngModel]="email()"
+            (ngModelChange)="email.set($event)"
+            [disabled]="ocupado()"
+          />
+          <button type="submit" [disabled]="ocupado() || solicitud.invalid">
+            {{ ocupado() ? 'Solicitando…' : 'Enviar enlace de recuperación' }}
+          </button>
+        </form>
+        @if (mensaje()) {
+          <div class="notice" role="status">{{ mensaje() }} Revisá también la carpeta de spam.</div>
+        }
+        @if (error()) {
+          <p class="error" role="alert">{{ error() }}</p>
+        }
+      }
+      <p class="signup-link"><a routerLink="/bienvenido/login">Volver al inicio de sesión</a></p>
+    </div>
+    <a class="browse-link" routerLink="/tienda/productos">Seguir mirando la tienda →</a>
+  </main>
+</div>

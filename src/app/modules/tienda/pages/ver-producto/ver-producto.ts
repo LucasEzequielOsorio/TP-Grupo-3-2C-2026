@@ -7,6 +7,7 @@ import { RouterLink, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { UsuarioService } from '../../../../api/services/usuario.service';
 import { VarianteTienda } from '../../interfaces/datos-producto';
+import { AvisoService } from '../../../../core/services/aviso.service';
 
 @Component({
   imports: [CurrencyPipe, TiendaNav, RouterLink, FormsModule],
@@ -16,11 +17,15 @@ import { VarianteTienda } from '../../interfaces/datos-producto';
 })
 export class VerProducto {
   tiendaService = inject(TiendaService);
+  private avisos = inject(AvisoService);
   auth = inject(UsuarioService);
   router = inject(Router);
   cantidad = signal(1);
-  mensajeCarrito = signal('');
   errorCarrito = signal('');
+  esFavorito = signal(false);
+  cargandoFavorito = signal(false);
+  guardandoFavorito = signal(false);
+  errorFavorito = signal('');
   id = input<number, string | number | undefined>(undefined, { transform: numberAttribute });
   producto = signal<DatosProducto>({ id: -1, nombre: '', descripcion: '', precio: 0, stock: -1 });
   waitingForCarritoEvent = signal<boolean>(false);
@@ -57,7 +62,6 @@ export class VerProducto {
     return v?.existencias.reduce((sum, e) => sum + e.cantidad, 0) || 0;
   }
   elegirColor(id: number) {
-    this.mensajeCarrito.set('');
     this.errorCarrito.set('');
     this.cantidad.set(1);
     this.colorSeleccionado.set(id);
@@ -98,6 +102,37 @@ export class VerProducto {
       });
       onCleanup(() => subscription.unsubscribe());
     });
+    effect((onCleanup) => {
+      const autenticada = this.auth.sesionActiva();
+      const productoId = this.producto().id;
+      if (!autenticada || productoId <= 0) {
+        this.esFavorito.set(false);
+        this.cargandoFavorito.set(false);
+        this.guardandoFavorito.set(false);
+        return;
+      }
+
+      this.cargandoFavorito.set(true);
+      this.errorFavorito.set('');
+      const solicitud = this.tiendaService.obtenerFavoritos().subscribe({
+        next: (favoritos) => {
+          this.esFavorito.set(favoritos.some((producto) => producto.id === productoId));
+          this.cargandoFavorito.set(false);
+        },
+        error: (error) => {
+          this.cargandoFavorito.set(false);
+          this.esFavorito.set(false);
+          if (error.status === 401) {
+            this.irAlLogin();
+            return;
+          }
+          this.errorFavorito.set(
+            error.error?.mensaje || 'No pudimos consultar tus favoritos. Intentá de nuevo.',
+          );
+        },
+      });
+      onCleanup(() => solicitud.unsubscribe());
+    });
   }
   disponible = computed(() => {
     return this.producto() && this.producto()!.stock > 0;
@@ -110,7 +145,6 @@ export class VerProducto {
     }
     const v = this.variante();
     if (!v || this.waitingForCarritoEvent()) return;
-    this.mensajeCarrito.set('');
     this.errorCarrito.set('');
     if (
       !Number.isInteger(this.cantidad()) ||
@@ -124,7 +158,7 @@ export class VerProducto {
     this.tiendaService.agregarAlCarrito(v.id, this.cantidad()).subscribe({
       next: () => {
         this.waitingForCarritoEvent.set(false);
-        this.mensajeCarrito.set('La prenda se agregó a tu carrito.');
+        this.avisos.mostrar('La prenda se agregó a tu carrito.');
       },
       error: (e) => {
         this.waitingForCarritoEvent.set(false);
@@ -137,5 +171,44 @@ export class VerProducto {
         );
       },
     });
+  }
+  cambiarFavorito() {
+    if (!this.auth.isLogged()) {
+      this.irAlLogin();
+      return;
+    }
+    if (this.guardandoFavorito() || this.cargandoFavorito()) return;
+    this.guardandoFavorito.set(true);
+    this.errorFavorito.set('');
+    const solicitud = this.esFavorito()
+      ? this.tiendaService.eliminarFavorito(this.producto().id)
+      : this.tiendaService.agregarFavorito(this.producto().id);
+    solicitud.subscribe({
+      next: (respuesta) => {
+        if (!this.auth.sesionActiva()) {
+          this.esFavorito.set(false);
+          this.guardandoFavorito.set(false);
+          return;
+        }
+        this.esFavorito.set(respuesta.favorito);
+        this.guardandoFavorito.set(false);
+        this.avisos.mostrar(
+          respuesta.favorito ? 'Agregaste la prenda a tus favoritos.' : 'Quitaste la prenda de favoritos.',
+        );
+      },
+      error: (error) => {
+        this.guardandoFavorito.set(false);
+        if (error.status === 401) {
+          this.irAlLogin();
+          return;
+        }
+        this.errorFavorito.set(
+          error.error?.mensaje || 'No pudimos actualizar tus favoritos. Intentá de nuevo.',
+        );
+      },
+    });
+  }
+  private irAlLogin() {
+    this.router.navigate(['/bienvenido/login'], { queryParams: { returnUrl: this.router.url } });
   }
 }

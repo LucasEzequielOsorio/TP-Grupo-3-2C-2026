@@ -13,6 +13,8 @@ export const pool = mysql.createPool({
   timezone: 'Z',
 });
 
+// Usa una sola conexión: confirma todos los cambios o los revierte ante un error.
+// finally devuelve siempre la conexión al pool para no agotar conexiones de MySQL.
 export async function transaction(work) {
   const connection = await pool.getConnection();
   try {

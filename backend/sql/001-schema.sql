@@ -47,6 +47,16 @@ CREATE TABLE productos (
   FOREIGN KEY (categoria_id) REFERENCES categorias(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE favoritos (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  usuario_id INT UNSIGNED NOT NULL,
+  producto_id INT UNSIGNED NOT NULL,
+  creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_favoritos_usuario_producto (usuario_id, producto_id),
+  CONSTRAINT fk_favoritos_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+  CONSTRAINT fk_favoritos_producto FOREIGN KEY (producto_id) REFERENCES productos(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 CREATE TABLE variantes_producto (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   stock_minimo INT UNSIGNED NOT NULL DEFAULT 3,
@@ -73,8 +83,10 @@ CREATE TABLE existencias (
   variante_id INT UNSIGNED NOT NULL,
   ubicacion_id INT UNSIGNED NOT NULL,
   cantidad INT NOT NULL DEFAULT 0,
+  reservada INT NOT NULL DEFAULT 0,
   PRIMARY KEY (variante_id, ubicacion_id),
   CONSTRAINT ck_existencias_cantidad CHECK (cantidad >= 0),
+  CONSTRAINT ck_stock_reservado CHECK (reservada>=0 AND reservada<=cantidad),
   FOREIGN KEY (variante_id) REFERENCES variantes_producto(id),
   FOREIGN KEY (ubicacion_id) REFERENCES ubicaciones(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -109,6 +121,9 @@ CREATE TABLE pedidos (
   usuario_id INT UNSIGNED NOT NULL,
   estado ENUM('pendiente', 'confirmado', 'cancelado', 'entregado') NOT NULL DEFAULT 'pendiente',
   direccion_entrega VARCHAR(255) NOT NULL,
+  pago_estado VARCHAR(30) NOT NULL DEFAULT 'sin_pago',
+  reserva_hasta DATETIME NULL,
+  pago_id VARCHAR(100) NULL,
   creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
