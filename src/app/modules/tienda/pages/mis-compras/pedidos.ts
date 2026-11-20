@@ -4,6 +4,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { switchMap, of, catchError, tap, Observable } from 'rxjs';
 import { TiendaNav } from '../../components/tienda-nav';
+import { TiendaFooter } from '../../components/tienda-footer';
 import {
   TiendaService,
   PedidoDetalle,
@@ -11,7 +12,7 @@ import {
 } from '../../../../api/services/tienda.service';
 @Component({
   selector: 'app-pedidos',
-  imports: [TiendaNav, RouterLink, CurrencyPipe, DatePipe],
+  imports: [TiendaNav, TiendaFooter, RouterLink, CurrencyPipe, DatePipe],
   templateUrl: './pedidos.html',
   styleUrls: ['../tienda.css', '../carrito/carrito.css'],
 })

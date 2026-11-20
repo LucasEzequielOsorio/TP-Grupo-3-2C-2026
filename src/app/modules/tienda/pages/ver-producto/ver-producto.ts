@@ -3,6 +3,7 @@ import { DatosProducto } from '../../interfaces/datos-producto';
 import { TiendaService } from '../../../../api/services/tienda.service';
 import { CurrencyPipe } from '@angular/common';
 import { TiendaNav } from '../../components/tienda-nav';
+import { TiendaFooter } from '../../components/tienda-footer';
 import { RouterLink, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { UsuarioService } from '../../../../api/services/usuario.service';
@@ -10,7 +11,7 @@ import { VarianteTienda } from '../../interfaces/datos-producto';
 import { AvisoService } from '../../../../core/services/aviso.service';
 
 @Component({
-  imports: [CurrencyPipe, TiendaNav, RouterLink, FormsModule],
+  imports: [CurrencyPipe, TiendaNav, TiendaFooter, RouterLink, FormsModule],
   selector: 'app-ver-producto',
   styleUrl: '../tienda.css',
   templateUrl: './ver-producto.html',

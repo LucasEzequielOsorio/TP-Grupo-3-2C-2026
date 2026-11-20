@@ -66,6 +66,7 @@
 }
 @media (max-width: 450px) {
   .location-stats {
+    grid-template-columns: 1fr;
     gap: 9px;
   }
   .location-stats article {
@@ -355,6 +356,7 @@ footer button {
   display: flex;
   gap: 8px;
   margin-bottom: 22px;
+  flex-wrap: wrap;
 }
 .tabs .active {
   background: #284d3e;
@@ -425,6 +427,10 @@ input[type='color'] {
   }
   .toolbar {
     padding: 16px;
+  }
+  .toolbar > div {
+    min-width: 100%;
+    flex-basis: 100%;
   }
   td,
   th {

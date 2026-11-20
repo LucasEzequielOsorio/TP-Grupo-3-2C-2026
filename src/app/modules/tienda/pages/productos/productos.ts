@@ -1,6 +1,7 @@
 import { Component, effect, inject, OnInit, signal, computed } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { TiendaNav } from '../../components/tienda-nav';
+import { TiendaFooter } from '../../components/tienda-footer';
 import { DatosProducto } from '../../interfaces/datos-producto';
 import { ProductCard } from '../../components/product-card/product-card';
 import { CarruselDestacados } from '../../components/carrusel-destacados/carrusel-destacados.component';
@@ -13,7 +14,7 @@ import { UsuarioService } from '../../../../api/services/usuario.service';
 import { AvisoService } from '../../../../core/services/aviso.service';
 
 @Component({
-  imports: [ProductCard, CarruselDestacados, FormsModule, TiendaNav, RouterLink],
+  imports: [ProductCard, CarruselDestacados, FormsModule, TiendaNav, TiendaFooter],
   selector: 'app-productos',
   styleUrl: '../tienda.css',
   templateUrl: './productos.html',

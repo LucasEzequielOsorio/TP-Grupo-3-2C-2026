@@ -87,6 +87,15 @@ try {
     .map((s) => s.trim())
     .filter(Boolean))
     await pool.query(statement);
+  const demoUsersSql = await readFile(
+    new URL('../sql/010-usuarios-demo.sql', import.meta.url),
+    'utf8',
+  );
+  for (const statement of demoUsersSql
+    .split(';')
+    .map((s) => s.trim())
+    .filter(Boolean))
+    await pool.query(statement);
   const [reviewColumn] = await pool.query("SHOW COLUMNS FROM checkout_pedidos LIKE 'revisado_en'");
   if (!reviewColumn.length)
     await pool.query('ALTER TABLE checkout_pedidos ADD COLUMN revisado_en DATETIME NULL');

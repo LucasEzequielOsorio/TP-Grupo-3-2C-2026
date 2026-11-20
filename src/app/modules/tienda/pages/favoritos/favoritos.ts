@@ -3,11 +3,12 @@ import { Router, RouterLink } from '@angular/router';
 import { DatosProducto } from '../../interfaces/datos-producto';
 import { TiendaService } from '../../../../api/services/tienda.service';
 import { TiendaNav } from '../../components/tienda-nav';
+import { TiendaFooter } from '../../components/tienda-footer';
 import { ProductCard } from '../../components/product-card/product-card';
 import { AvisoService } from '../../../../core/services/aviso.service';
 
 @Component({
-  imports: [RouterLink, TiendaNav, ProductCard],
+  imports: [RouterLink, TiendaNav, TiendaFooter, ProductCard],
   selector: 'app-favoritos',
   styleUrl: '../tienda.css',
   templateUrl: './favoritos.html',

@@ -1,7 +1,8 @@
-import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { TiendaService } from './tienda.service';
+import { authInterceptor } from '../../core/interceptors/auth.interceptor';
 
 describe('Servicio de tienda', () => {
   let servicio: TiendaService;
@@ -10,7 +11,11 @@ describe('Servicio de tienda', () => {
   beforeEach(() => {
     localStorage.setItem('auth_token', 'token-de-prueba');
     TestBed.configureTestingModule({
-      providers: [TiendaService, provideHttpClient(), provideHttpClientTesting()],
+      providers: [
+        TiendaService,
+        provideHttpClient(withInterceptors([authInterceptor])),
+        provideHttpClientTesting(),
+      ],
     });
     servicio = TestBed.inject(TiendaService);
     solicitudes = TestBed.inject(HttpTestingController);

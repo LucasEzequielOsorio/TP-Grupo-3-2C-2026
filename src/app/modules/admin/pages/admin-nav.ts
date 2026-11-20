@@ -75,6 +75,22 @@ import { UsuarioService } from '../../../api/services/usuario.service';
           flex-basis: 100%;
         }
       }
+      @media (max-width: 480px) {
+        nav {
+          padding: 12px 14px;
+          gap: 10px;
+        }
+        .brand {
+          font-size: 20px;
+        }
+        .links {
+          gap: 6px;
+        }
+        .links a {
+          padding: 6px 9px;
+          font-size: 11px;
+        }
+      }
     `,
   ],
 })

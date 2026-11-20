@@ -1,9 +1,7 @@
 import { inject, Service, signal } from '@angular/core';
 import { DatosFormularioUsuario } from '../../modules/usuario/interfaces/datos-formulario-usuario';
-import { Observable, of, tap } from 'rxjs';
+import { Observable, tap } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
-import { DatosFormularioPerfil } from '../../modules/perfil/interfaces/datos-formulario-perfil';
-import { DatosProducto } from '../../modules/tienda/interfaces/datos-producto';
 
 export interface Usuario {
   id: string;
@@ -28,10 +26,6 @@ export interface ActualizacionCuenta {
   password_actual?: string;
   password_nueva?: string;
 }
-export interface RespuestaCargaPerfil {
-  exito: boolean;
-  mensaje?: string;
-}
 @Service()
 export class UsuarioService {
   private readonly estadoSesion = signal(this.tokenVigente());
@@ -47,41 +41,16 @@ export class UsuarioService {
     return this.http.post<{ mensaje: string }>('/api/auth/restablecer', { token, password });
   }
   getCuenta() {
-    return this.http.get<{ usuario: CuentaUsuario }>('/api/auth/cuenta', {
-      headers: { Authorization: 'Bearer ' + (localStorage.getItem('auth_token') || '') },
-    });
+    return this.http.get<{ usuario: CuentaUsuario }>('/api/auth/cuenta');
   }
   actualizarCuenta(datos: ActualizacionCuenta) {
     return this.http
-      .put<RespuestaAuth & { usuario: CuentaUsuario }>('/api/auth/cuenta', datos, {
-        headers: { Authorization: 'Bearer ' + (localStorage.getItem('auth_token') || '') },
-      })
+      .put<RespuestaAuth & { usuario: CuentaUsuario }>('/api/auth/cuenta', datos)
       .pipe(
         tap((res) => {
           this.guardarSesion(res.token, res.usuario.rol);
         }),
       );
-  }
-  cargarPerfil(datos: DatosFormularioPerfil) {
-    return of({
-      exito: true,
-    });
-  }
-  hasProfile() {
-    return this.isLogged() ? this.getProfile() !== null : false;
-  }
-  getProfile(): Observable<DatosFormularioPerfil> {
-    return of({
-      nombre: 'Lucas',
-      apellido: 'Osorio',
-      fechaNacimiento: 'dd/mm/yyyy',
-      direccion: {
-        calle: 'Brandsen',
-        altura: 805,
-        localidad: 'Buenos Aires',
-        codigoPostal: 'C1161AAQ',
-      },
-    });
   }
   isLogged() {
     return this.estadoSesion() && this.tokenVigente();
@@ -112,9 +81,7 @@ export class UsuarioService {
 
   private http = inject(HttpClient);
   getSesion() {
-    return this.http.get<{ usuario: Usuario }>('/api/auth/me', {
-      headers: { Authorization: `Bearer ${localStorage.getItem('auth_token') || ''}` },
-    });
+    return this.http.get<{ usuario: Usuario }>('/api/auth/me');
   }
   registrarUsuario(usuario: DatosFormularioUsuario): Observable<RespuestaAuth> {
     return this.http.post<RespuestaAuth>('/api/auth/registro', usuario);
