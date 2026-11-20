@@ -50,3 +50,4 @@ Thumbs.db
 
 # Product images uploaded locally
 /backend/uploads/
+.env.example
