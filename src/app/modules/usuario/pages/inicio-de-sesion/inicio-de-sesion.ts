@@ -22,8 +22,6 @@ export class InicioDeSesion {
     this.waitingForResponse.set(true);
     this.usuarioService.iniciarSesion(datos).subscribe({
       next: (res: RespuestaAuth) => {
-        localStorage.setItem('auth_token', res.token);
-        localStorage.setItem('user_role', res.usuario.rol);
         this.waitingForResponse.set(false);
         const destino =
           this.retorno &&

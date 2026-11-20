@@ -1,5 +1,6 @@
 import { provideRouter, Router } from '@angular/router';
 import { TestBed } from '@angular/core/testing';
+import { signal } from '@angular/core';
 import { of } from 'rxjs';
 import { TiendaService } from '../../../../api/services/tienda.service';
 import { UsuarioService } from '../../../../api/services/usuario.service';
@@ -14,7 +15,7 @@ describe('Detalle de producto', () => {
     stock: 0,
     variantes: [],
   };
-  let autenticado: boolean;
+  let sesionActiva: ReturnType<typeof signal<boolean>>;
   let servicio: {
     getProducto: ReturnType<typeof vi.fn>;
     obtenerFavoritos: ReturnType<typeof vi.fn>;
@@ -23,7 +24,7 @@ describe('Detalle de producto', () => {
   };
 
   beforeEach(() => {
-    autenticado = true;
+    sesionActiva = signal(true);
     servicio = {
       getProducto: vi.fn(() => of(producto)),
       obtenerFavoritos: vi.fn(() => of([])),
@@ -37,7 +38,11 @@ describe('Detalle de producto', () => {
         { provide: TiendaService, useValue: servicio },
         {
           provide: UsuarioService,
-          useValue: { isLogged: () => autenticado, isAdmin: () => false },
+          useValue: {
+            isLogged: () => sesionActiva(),
+            isAdmin: () => false,
+            sesionActiva: sesionActiva.asReadonly(),
+          },
         },
       ],
     });
@@ -63,7 +68,7 @@ describe('Detalle de producto', () => {
   });
 
   it('redirige al login conservando la página cuando no hay sesión', async () => {
-    autenticado = false;
+    sesionActiva.set(false);
     const fixture = TestBed.createComponent(VerProducto);
     fixture.componentRef.setInput('id', producto.id);
     fixture.detectChanges();
@@ -77,5 +82,19 @@ describe('Detalle de producto', () => {
       queryParams: { returnUrl: router.url },
     });
     expect(servicio.agregarFavorito).not.toHaveBeenCalled();
+  });
+
+  it('vacía el corazón cuando se cierra la sesión', async () => {
+    const fixture = TestBed.createComponent(VerProducto);
+    fixture.componentRef.setInput('id', producto.id);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const componente = fixture.componentInstance;
+    componente.esFavorito.set(true);
+
+    sesionActiva.set(false);
+    fixture.detectChanges();
+
+    expect(componente.esFavorito()).toBe(false);
   });
 });

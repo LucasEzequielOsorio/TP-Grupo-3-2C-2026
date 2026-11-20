@@ -88,8 +88,7 @@ export class AdminNav {
     this.auth.logout();
     this.router.navigate(['/bienvenido/login']).then((ok) => {
       if (!ok) {
-        if (token) localStorage.setItem('auth_token', token);
-        if (role) localStorage.setItem('user_role', role);
+        if (token) this.auth.guardarSesion(token, role);
       }
     });
   }

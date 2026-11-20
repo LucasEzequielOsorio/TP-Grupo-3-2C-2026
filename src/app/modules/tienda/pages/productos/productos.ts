@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal, computed } from '@angular/core';
+import { Component, effect, inject, OnInit, signal, computed } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { TiendaNav } from '../../components/tienda-nav';
 import { DatosProducto } from '../../interfaces/datos-producto';
@@ -45,6 +45,38 @@ export class Productos implements OnInit {
       .pipe(debounceTime(300), takeUntilDestroyed())
       .subscribe(() => this.cargar(1));
     inject(DestroyRef).onDestroy(() => this.request?.unsubscribe());
+    effect((onCleanup) => {
+      if (!this.auth.sesionActiva()) {
+        this.idsFavoritos.set(new Set());
+        this.favoritosEnProceso.set(new Set());
+        this.cargandoFavoritos.set(false);
+        this.errorFavoritos.set('');
+        return;
+      }
+
+      this.cargandoFavoritos.set(true);
+      this.errorFavoritos.set('');
+      const solicitud = this.tiendaService.obtenerFavoritos().subscribe({
+        next: (productos) => {
+          this.idsFavoritos.set(new Set(productos.map((producto) => producto.id)));
+          this.cargandoFavoritos.set(false);
+        },
+        error: (error) => {
+          this.cargandoFavoritos.set(false);
+          this.idsFavoritos.set(new Set());
+          if (error.status === 401) {
+            this.router.navigate(['/bienvenido/login'], {
+              queryParams: { returnUrl: this.router.url },
+            });
+            return;
+          }
+          this.errorFavoritos.set(
+            error.error?.mensaje || 'No pudimos cargar tus favoritos. Intentá de nuevo.',
+          );
+        },
+      });
+      onCleanup(() => solicitud.unsubscribe());
+    });
   }
   portada = computed(() => this.productos().find((p) => p.imagen_url));
   // Angular muestra solo la página enviada por el servidor, sin filtrar el listado en memoria.
@@ -69,33 +101,6 @@ export class Productos implements OnInit {
 
   ngOnInit() {
     this.cargar();
-    this.cargarFavoritos();
-  }
-  cargarFavoritos() {
-    if (!this.auth.isLogged()) {
-      this.idsFavoritos.set(new Set());
-      return;
-    }
-    this.cargandoFavoritos.set(true);
-    this.errorFavoritos.set('');
-    this.tiendaService.obtenerFavoritos().subscribe({
-      next: (productos) => {
-        this.idsFavoritos.set(new Set(productos.map((producto) => producto.id)));
-        this.cargandoFavoritos.set(false);
-      },
-      error: (error) => {
-        this.cargandoFavoritos.set(false);
-        if (error.status === 401) {
-          this.router.navigate(['/bienvenido/login'], {
-            queryParams: { returnUrl: this.router.url },
-          });
-          return;
-        }
-        this.errorFavoritos.set(
-          error.error?.mensaje || 'No pudimos cargar tus favoritos. Intentá de nuevo.',
-        );
-      },
-    });
   }
   cambiarFavorito(productoId: number) {
     if (!this.auth.isLogged()) {
@@ -113,6 +118,10 @@ export class Productos implements OnInit {
       : this.tiendaService.agregarFavorito(productoId);
     solicitud.subscribe({
       next: (respuesta) => {
+        if (!this.auth.sesionActiva()) {
+          this.liberarFavorito(productoId);
+          return;
+        }
         this.idsFavoritos.update((ids) => {
           const actualizados = new Set(ids);
           if (respuesta.favorito) actualizados.add(productoId);

@@ -2,19 +2,29 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
+import { signal } from '@angular/core';
 import { Productos } from './productos';
 import { UsuarioService } from '../../../../api/services/usuario.service';
 
 describe('Catálogo paginado desde el servidor', () => {
   let http: HttpTestingController;
+  let sesionActiva: ReturnType<typeof signal<boolean>>;
   beforeEach(() => {
+    sesionActiva = signal(false);
     TestBed.configureTestingModule({
       imports: [Productos],
       providers: [
         provideRouter([]),
         provideHttpClient(),
         provideHttpClientTesting(),
-        { provide: UsuarioService, useValue: { isLogged: () => false, isAdmin: () => false } },
+        {
+          provide: UsuarioService,
+          useValue: {
+            isLogged: () => sesionActiva(),
+            isAdmin: () => false,
+            sesionActiva: sesionActiva.asReadonly(),
+          },
+        },
       ],
     });
     http = TestBed.inject(HttpTestingController);
@@ -56,5 +66,29 @@ describe('Catálogo paginado desde el servidor', () => {
     expect(current.request.params.get('pagina')).toBe('1');
     expect(current.request.params.get('categoria')).toBe('');
     current.flush(response);
+  });
+
+  it('limpia los corazones al cerrar sesión', async () => {
+    const fixture = TestBed.createComponent(Productos);
+    fixture.detectChanges();
+    const solicitudesCatalogo = http.match((r) => r.url === '/api/productos');
+    expect(solicitudesCatalogo.length).toBeGreaterThan(0);
+    solicitudesCatalogo.forEach((solicitud) => solicitud.flush(response));
+    const componente = fixture.componentInstance;
+
+    sesionActiva.set(true);
+    fixture.detectChanges();
+    const solicitudesFavoritos = http.match('/api/favoritos');
+    expect(solicitudesFavoritos.length).toBeGreaterThan(0);
+    solicitudesFavoritos.forEach((solicitud) =>
+      solicitud.flush([
+      { id: 8, nombre: 'Buzo', descripcion: '', precio: 120, stock: 1 },
+      ]),
+    );
+    expect(componente.idsFavoritos().has(8)).toBe(true);
+
+    sesionActiva.set(false);
+    fixture.detectChanges();
+    expect(componente.idsFavoritos().size).toBe(0);
   });
 });

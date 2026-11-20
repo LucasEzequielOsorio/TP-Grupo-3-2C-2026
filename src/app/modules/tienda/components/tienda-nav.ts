@@ -122,8 +122,7 @@ export class TiendaNav {
     this.auth.logout();
     this.router.navigate(['/tienda/productos']).then((ok) => {
       if (!ok && token) {
-        localStorage.setItem('auth_token', token);
-        if (role) localStorage.setItem('user_role', role);
+        this.auth.guardarSesion(token, role);
       }
     });
   }
