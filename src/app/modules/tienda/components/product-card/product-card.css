@@ -8,6 +8,9 @@
 article {
   min-width: 0;
 }
+.contenedor-imagen {
+  position: relative;
+}
 .image-button {
   display: block;
   position: relative;
@@ -39,6 +42,43 @@ article {
   font-size: 10px;
   color: #405238;
   border-radius: 4px;
+}
+.boton-favorito {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border: 0;
+  border-radius: 50%;
+  background: #ffffffed;
+  color: #536447;
+  cursor: pointer;
+}
+.boton-favorito.favorito-activo {
+  color: #9c4c56;
+}
+.boton-favorito:disabled {
+  cursor: wait;
+}
+.boton-favorito svg {
+  width: 21px;
+  height: 21px;
+  stroke: currentColor;
+  stroke-width: 1.7;
+}
+.solo-lectores-pantalla {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 .card-meta {
   display: flex;

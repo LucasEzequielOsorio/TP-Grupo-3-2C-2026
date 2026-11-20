@@ -13,7 +13,7 @@ npm --prefix backend run dev
 
 Antes de iniciar, completar `JWT_SECRET` en `.env` con un valor aleatorio de al menos 32 caracteres. Para generarlo: `node -e "console.log(require('node:crypto').randomBytes(48).toString('hex'))"`. Configurar también `ADMIN_EMAIL` y `ADMIN_PASSWORD` para crear la cuenta local (mínimo 8 caracteres, mayúscula, minúscula y número). `admin:create` se ejecuta una sola vez y rechaza un email existente sin cambiar sus datos. Nunca guardar `.env` en Git.
 
-`db:migrate` agrega de forma idempotente la columna de versión a las bases creadas antes de la API. Las bases nuevas ya la incluyen. No vuelve a cargar el seed.
+`db:migrate` agrega de forma idempotente la columna de versión a las bases creadas antes de la API y crea la tabla `favoritos` con unicidad por usuario/producto y borrado en cascada. Las bases nuevas ya incluyen el esquema. No vuelve a cargar el seed.
 
 En otra terminal: `npm ci` y `npm start`. Abrir `http://127.0.0.1:4200/bienvenido/login`. El administrador se dirige al panel `/admin/productos`; los clientes, a la tienda. Angular redirige `/api` al puerto 3000 mediante `proxy.conf.json`; reiniciar `ng serve` si cambia ese archivo. No hace falta habilitar CORS. La API escucha solo en localhost.
 
@@ -46,6 +46,9 @@ Cambiar o quitar una imagen actualiza el producto al guardar. No borra archivos 
 | PUT | /api/auth/cuenta | Edición de la cuenta autenticada |
 | GET | /api/productos | Productos activos |
 | GET | /api/productos/:id | Producto activo y variantes activas |
+| GET | /api/favoritos | Productos favoritos del usuario autenticado |
+| POST | /api/favoritos/:productoId | Agregar producto activo a favoritos |
+| DELETE | /api/favoritos/:productoId | Quitar producto de favoritos |
 | GET | /api/admin/catalogos | Admin |
 | GET | /api/admin/productos | Admin, incluye inactivos |
 | GET | /api/admin/productos/:id | Admin |

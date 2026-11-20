@@ -1,0 +1,83 @@
+<section class="featured" aria-labelledby="featured-title">
+  <header class="featured-heading">
+    <span class="eyebrow">ELEGIDOS PARA VOS</span>
+    <h2 id="featured-title">Productos destacados</h2>
+  </header>
+
+  @if (cargando()) {
+    <p class="featured-status" role="status">Cargando productos destacados…</p>
+  } @else if (error()) {
+    <p class="featured-status" role="alert">{{ error() }}</p>
+  } @else if (productoActual(); as producto) {
+    <div class="carousel" aria-roledescription="carrusel">
+      <button
+        class="carousel-arrow previous"
+        type="button"
+        aria-label="Producto anterior"
+        [disabled]="productos().length < 2"
+        (click)="anterior()"
+      >
+        ‹
+      </button>
+
+      <article class="featured-card" aria-live="polite">
+        <div class="featured-image">
+          @if (
+            (producto.imagen_url || producto.imagenes?.[0]) && imagenFallida() !== producto.id
+          ) {
+            <img
+              [src]="producto.imagen_url || producto.imagenes?.[0]"
+              [alt]="producto.nombre"
+              (error)="imagenFallida.set(producto.id)"
+            />
+          } @else {
+            <svg viewBox="0 0 200 220" aria-hidden="true">
+              <path
+                d="m67 25-30 13L5 89l37 22 22-25v111h72V86l22 25 37-22-32-51-30-13c-6 26-60 26-66 0Z"
+                fill="currentColor"
+              />
+            </svg>
+          }
+        </div>
+
+        <div class="featured-copy">
+          <span class="product-category">{{ producto.clasificacion || 'Esenciales' }}</span>
+          <h3>{{ producto.nombre }}</h3>
+          <p class="product-description">{{ producto.descripcion }}</p>
+          <p class="product-stock">Disponible · {{ producto.stock }} en stock</p>
+          <strong class="product-price">
+            {{ producto.precio | currency: 'ARS' : 'symbol' : '1.0-2' }}
+          </strong>
+          <button class="detail-button" type="button" (click)="irAlDetalle(producto.id)">
+            Ver producto <span aria-hidden="true">↗</span>
+          </button>
+        </div>
+      </article>
+
+      <button
+        class="carousel-arrow next"
+        type="button"
+        aria-label="Producto siguiente"
+        [disabled]="productos().length < 2"
+        (click)="siguiente()"
+      >
+        ›
+      </button>
+    </div>
+
+    <nav class="carousel-dots" aria-label="Elegir producto destacado">
+      @for (item of productos(); track item.id; let i = $index) {
+        <button
+          class="dot"
+          type="button"
+          [class.active]="indiceActual() === i"
+          [attr.aria-label]="'Mostrar ' + item.nombre"
+          [attr.aria-pressed]="indiceActual() === i"
+          (click)="indiceActual.set(i)"
+        ></button>
+      }
+    </nav>
+  } @else {
+    <p class="featured-status">No hay productos disponibles para destacar.</p>
+  }
+</section>

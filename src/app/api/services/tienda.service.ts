@@ -51,8 +51,26 @@ export interface CarritoRespuesta {
   total: number;
   unidades: number;
 }
+export interface RespuestaFavorito {
+  producto_id: number;
+  favorito: boolean;
+  creado?: boolean;
+}
 @Service()
 export class TiendaService {
+  obtenerFavoritos() {
+    return this.http.get<DatosProducto[]>('/api/favoritos', this.options);
+  }
+  agregarFavorito(productoId: number) {
+    return this.http.post<RespuestaFavorito>(
+      '/api/favoritos/' + productoId,
+      {},
+      this.options,
+    );
+  }
+  eliminarFavorito(productoId: number) {
+    return this.http.delete<RespuestaFavorito>('/api/favoritos/' + productoId, this.options);
+  }
   iniciarPago(id: number) {
     return this.http.post<{ checkout_url: string }>(
       '/api/pedidos/' + id + '/pagar',

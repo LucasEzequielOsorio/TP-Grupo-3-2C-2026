@@ -15,6 +15,7 @@ import { UsuarioService } from '../../../api/services/usuario.service';
           ><a class="register" routerLink="/bienvenido/signup">Crear cuenta</a>
         } @else {
           <a routerLink="/perfil/mi-cuenta">Mi cuenta</a>
+          <a routerLink="/tienda/favoritos">Mis favoritos</a>
           <a routerLink="/tienda/pedidos">Mis pedidos</a>
           @if (auth.isAdmin()) {
             <a routerLink="/admin/productos">Administración</a>
@@ -121,8 +122,7 @@ export class TiendaNav {
     this.auth.logout();
     this.router.navigate(['/tienda/productos']).then((ok) => {
       if (!ok && token) {
-        localStorage.setItem('auth_token', token);
-        if (role) localStorage.setItem('user_role', role);
+        this.auth.guardarSesion(token, role);
       }
     });
   }

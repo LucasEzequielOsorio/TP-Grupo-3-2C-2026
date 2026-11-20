@@ -94,6 +94,35 @@ h1 > span {
   color: white;
   border-color: #294b3a;
 }
+.boton-favorito-detalle {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  border: 1px solid #d9dfcf;
+  border-radius: 5px;
+  background: white;
+  color: #536447;
+  padding: 10px 14px;
+  font-size: 11px;
+}
+.boton-favorito-detalle.favorito-activo {
+  color: #9c4c56;
+  border-color: #e4c9cc;
+}
+.boton-favorito-detalle:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+.boton-favorito-detalle svg {
+  width: 17px;
+  height: 17px;
+  stroke: currentColor;
+  stroke-width: 1.7;
+}
+.error-favoritos {
+  color: #9c4c56;
+  font-size: 12px;
+}
 .hero-copy .shop-button {
   margin-top: 16px;
 }
