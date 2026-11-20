@@ -59,64 +59,48 @@ export interface RespuestaFavorito {
 @Service()
 export class TiendaService {
   obtenerFavoritos() {
-    return this.http.get<DatosProducto[]>('/api/favoritos', this.options);
+    return this.http.get<DatosProducto[]>('/api/favoritos');
   }
   agregarFavorito(productoId: number) {
-    return this.http.post<RespuestaFavorito>(
-      '/api/favoritos/' + productoId,
-      {},
-      this.options,
-    );
+    return this.http.post<RespuestaFavorito>('/api/favoritos/' + productoId, {});
   }
   eliminarFavorito(productoId: number) {
-    return this.http.delete<RespuestaFavorito>('/api/favoritos/' + productoId, this.options);
+    return this.http.delete<RespuestaFavorito>('/api/favoritos/' + productoId);
   }
   iniciarPago(id: number) {
-    return this.http.post<{ checkout_url: string }>(
-      '/api/pedidos/' + id + '/pagar',
-      {},
-      this.options,
-    );
+    return this.http.post<{ checkout_url: string }>('/api/pedidos/' + id + '/pagar', {});
   }
   sincronizarPago(id: number) {
-    return this.http.post<PedidoDetalle>('/api/pedidos/' + id + '/sincronizar', {}, this.options);
+    return this.http.post<PedidoDetalle>('/api/pedidos/' + id + '/sincronizar', {});
   }
   cancelarPedido(id: number) {
-    return this.http.post<PedidoDetalle>('/api/pedidos/' + id + '/cancelar', {}, this.options);
+    return this.http.post<PedidoDetalle>('/api/pedidos/' + id + '/cancelar', {});
   }
   pagosRevision() {
     return this.http.get<{ id: number; email: string; pago_estado: string; total: number }[]>(
       '/api/admin/pagos-revision',
-      this.options,
     );
   }
   getPedidos() {
-    return this.http.get<PedidoResumen[]>('/api/pedidos', this.options);
+    return this.http.get<PedidoResumen[]>('/api/pedidos');
   }
   getPedido(id: number) {
-    return this.http.get<PedidoDetalle>('/api/pedidos/' + id, this.options);
+    return this.http.get<PedidoDetalle>('/api/pedidos/' + id);
   }
   getEntrega() {
-    return this.http.get<{ direccion: string }>('/api/pedidos/entrega', this.options);
+    return this.http.get<{ direccion: string }>('/api/pedidos/entrega');
   }
   confirmarPedido(clave: string, items: LineaCarrito[]) {
-    return this.http.post<PedidoDetalle>(
-      '/api/pedidos',
-      {
-        clave,
-        items: items.map((i) => ({
-          variante_id: i.variante_id,
-          cantidad: i.cantidad,
-          precio: i.precio,
-        })),
-      },
-      this.options,
-    );
+    return this.http.post<PedidoDetalle>('/api/pedidos', {
+      clave,
+      items: items.map((i) => ({
+        variante_id: i.variante_id,
+        cantidad: i.cantidad,
+        precio: i.precio,
+      })),
+    });
   }
   private http = inject(HttpClient);
-  private get options() {
-    return { headers: { Authorization: 'Bearer ' + (localStorage.getItem('auth_token') || '') } };
-  }
   getCompras() {
     return of<DatosCompra[]>([]);
   }
@@ -133,19 +117,15 @@ export class TiendaService {
     return this.http.get<DatosProducto>('/api/productos/' + id);
   }
   agregarAlCarrito(varianteId: number, cantidad: number) {
-    return this.http.post<CarritoRespuesta>(
-      '/api/carrito/items/' + varianteId,
-      { cantidad },
-      this.options,
-    );
+    return this.http.post<CarritoRespuesta>('/api/carrito/items/' + varianteId, { cantidad });
   }
   getCarrito() {
-    return this.http.get<CarritoRespuesta>('/api/carrito', this.options);
+    return this.http.get<CarritoRespuesta>('/api/carrito');
   }
   actualizarCantidad(id: number, cantidad: number) {
-    return this.http.put<CarritoRespuesta>('/api/carrito/items/' + id, { cantidad }, this.options);
+    return this.http.put<CarritoRespuesta>('/api/carrito/items/' + id, { cantidad });
   }
   eliminarDelCarrito(id: number) {
-    return this.http.delete<CarritoRespuesta>('/api/carrito/items/' + id, this.options);
+    return this.http.delete<CarritoRespuesta>('/api/carrito/items/' + id);
   }
 }

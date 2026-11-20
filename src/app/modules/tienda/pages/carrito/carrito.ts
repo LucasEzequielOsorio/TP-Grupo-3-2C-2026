@@ -7,9 +7,10 @@ import {
   LineaCarrito,
 } from '../../../../api/services/tienda.service';
 import { TiendaNav } from '../../components/tienda-nav';
+import { TiendaFooter } from '../../components/tienda-footer';
 import { Observable } from 'rxjs';
 @Component({
-  imports: [CurrencyPipe, RouterLink, TiendaNav],
+  imports: [CurrencyPipe, RouterLink, TiendaNav, TiendaFooter],
   selector: 'app-carrito',
   styleUrls: ['../tienda.css', './carrito.css'],
   templateUrl: './carrito.html',

@@ -1,12 +1,11 @@
-import { UsuarioService } from './../../../api/services/usuario.service';
 import { CanActivateFn, Router } from '@angular/router';
 import { inject } from '@angular/core';
+import { UsuarioService } from '../../api/services/usuario.service';
 
 export const unloggedGuard: CanActivateFn = (route, state) => {
   const usuarioService = inject(UsuarioService);
   const router = inject(Router);
-  if(!usuarioService.isLogged())
-  {
+  if (!usuarioService.isLogged()) {
     return true;
   }
   return router.createUrlTree([usuarioService.isAdmin() ? '/admin/productos' : '/tienda']);

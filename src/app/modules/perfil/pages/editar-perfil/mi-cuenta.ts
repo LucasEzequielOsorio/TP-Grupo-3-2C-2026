@@ -7,11 +7,12 @@ import {
   ActualizacionCuenta,
 } from '../../../../api/services/usuario.service';
 import { TiendaNav } from '../../../tienda/components/tienda-nav';
+import { TiendaFooter } from '../../../tienda/components/tienda-footer';
 import { PasswordField } from '../../components/password-field';
 
 @Component({
   selector: 'app-mi-cuenta',
-  imports: [FormsModule, TiendaNav, PasswordField],
+  imports: [FormsModule, TiendaNav, TiendaFooter, PasswordField],
   templateUrl: './mi-cuenta.html',
   styleUrls: ['../../../tienda/pages/tienda.css', './mi-cuenta.css'],
 })

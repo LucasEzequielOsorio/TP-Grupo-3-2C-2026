@@ -47,34 +47,24 @@ export interface ProductoAdmin {
 @Service()
 export class AdminProductosService {
   private http = inject(HttpClient);
-  private options() {
-    return {
-      headers: new HttpHeaders({
-        Authorization: `Bearer ${localStorage.getItem('auth_token') || ''}`,
-      }),
-    };
-  }
+
   catalogos() {
-    return this.http.get<Catalogos>('/api/admin/catalogos', this.options());
+    return this.http.get<Catalogos>('/api/admin/catalogos');
   }
   listar() {
-    return this.http.get<ProductoAdmin[]>('/api/admin/productos', this.options());
+    return this.http.get<ProductoAdmin[]>('/api/admin/productos');
   }
   obtener(id: number) {
-    return this.http.get<ProductoAdmin>(`/api/admin/productos/${id}`, this.options());
+    return this.http.get<ProductoAdmin>(`/api/admin/productos/${id}`);
   }
   guardar(producto: ProductoAdmin) {
     return producto.id
-      ? this.http.put<ProductoAdmin>(
-          `/api/admin/productos/${producto.id}`,
-          producto,
-          this.options(),
-        )
-      : this.http.post<ProductoAdmin>('/api/admin/productos', producto, this.options());
+      ? this.http.put<ProductoAdmin>(`/api/admin/productos/${producto.id}`, producto)
+      : this.http.post<ProductoAdmin>('/api/admin/productos', producto);
   }
   subirImagen(archivo: File) {
     return this.http.post<{ imagen_url: string }>('/api/admin/imagenes', archivo, {
-      headers: this.options().headers.set('Content-Type', archivo.type),
+      headers: new HttpHeaders({ 'Content-Type': archivo.type }),
     });
   }
   guardarCatalogo(
@@ -83,17 +73,16 @@ export class AdminProductosService {
     id?: number,
   ) {
     return id
-      ? this.http.put<Opcion>(`/api/admin/catalogos/${tipo}/${id}`, datos, this.options())
-      : this.http.post<Opcion>(`/api/admin/catalogos/${tipo}`, datos, this.options());
+      ? this.http.put<Opcion>(`/api/admin/catalogos/${tipo}/${id}`, datos)
+      : this.http.post<Opcion>(`/api/admin/catalogos/${tipo}`, datos);
   }
   alertas(ubicacion?: number) {
     return this.http.get<AlertaStock[]>('/api/admin/stock-alertas', {
-      ...this.options(),
       params: ubicacion ? { ubicacion_id: ubicacion } : {},
     });
   }
   movimientos(params: Record<string, string | number>) {
-    return this.http.get<Historial>('/api/admin/movimientos', { ...this.options(), params });
+    return this.http.get<Historial>('/api/admin/movimientos', { params });
   }
 }
 export interface AlertaStock {

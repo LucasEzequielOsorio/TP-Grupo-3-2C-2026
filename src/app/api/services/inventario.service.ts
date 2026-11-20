@@ -1,5 +1,5 @@
 import { Service, inject } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 export interface Ubicacion {
   id?: number;
   nombre: string;
@@ -82,47 +82,38 @@ export interface ResumenUbicacion {
 @Service()
 export class InventarioService {
   private http = inject(HttpClient);
-  private options() {
-    return {
-      headers: new HttpHeaders({
-        Authorization: `Bearer ${localStorage.getItem('auth_token') || ''}`,
-      }),
-    };
-  }
+
   ubicaciones() {
-    return this.http.get<Ubicacion[]>('/api/admin/ubicaciones', this.options());
+    return this.http.get<Ubicacion[]>('/api/admin/ubicaciones');
   }
   guardarUbicacion(data: Ubicacion) {
     return data.id
-      ? this.http.put<Ubicacion>(`/api/admin/ubicaciones/${data.id}`, data, this.options())
-      : this.http.post<Ubicacion>('/api/admin/ubicaciones', data, this.options());
+      ? this.http.put<Ubicacion>(`/api/admin/ubicaciones/${data.id}`, data)
+      : this.http.post<Ubicacion>('/api/admin/ubicaciones', data);
   }
   stock(id: number) {
-    return this.http.get<StockUbicacion[]>(`/api/admin/ubicaciones/${id}/stock`, this.options());
+    return this.http.get<StockUbicacion[]>(`/api/admin/ubicaciones/${id}/stock`);
   }
   resumen(id: number, params: Record<string, string | number>) {
     return this.http.get<ResumenUbicacion>(`/api/admin/ubicaciones/${id}/resumen`, {
-      ...this.options(),
       params,
     });
   }
   transferencias(pagina = 1, estado = '') {
     return this.http.get<ListaTransferencias>('/api/admin/transferencias', {
-      ...this.options(),
       params: { pagina, ...(estado ? { estado } : {}) },
     });
   }
   transferencia(id: number) {
-    return this.http.get<Transferencia>(`/api/admin/transferencias/${id}`, this.options());
+    return this.http.get<Transferencia>(`/api/admin/transferencias/${id}`);
   }
   crear(data: BorradorTransferencia) {
-    return this.http.post<Transferencia>('/api/admin/transferencias', data, this.options());
+    return this.http.post<Transferencia>('/api/admin/transferencias', data);
   }
   accion(id: number, accion: string) {
     return this.http.post<Transferencia>(
       `/api/admin/transferencias/${id}/${accion}`,
       {},
-      this.options(),
     );
   }
 }

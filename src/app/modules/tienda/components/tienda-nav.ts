@@ -106,6 +106,28 @@ import { UsuarioService } from '../../../api/services/usuario.service';
           font-size: 10px;
         }
       }
+      @media (max-width: 480px) {
+        nav {
+          padding: 14px 16px;
+          gap: 12px;
+        }
+        .brand {
+          font-size: 24px;
+        }
+        .right {
+          gap: 8px 12px;
+          justify-content: flex-start;
+          text-align: left;
+          font-size: 11px;
+        }
+        .right a,
+        .right button {
+          padding: 4px 6px;
+        }
+        .register {
+          padding: 6px 10px;
+        }
+      }
     `,
   ],
 })

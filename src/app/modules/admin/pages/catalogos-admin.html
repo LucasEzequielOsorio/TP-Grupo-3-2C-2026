@@ -43,45 +43,47 @@
       @if (cargando()) {
         <div class="empty">Cargando…</div>
       } @else {
-        <table>
-          <thead>
-            <tr>
-              <th>NOMBRE</th>
-              @if (tipo === 'talles') {
-                <th>ORDEN</th>
-              }
-              @if (tipo === 'colores') {
-                <th>COLOR</th>
-              }
-              <th>ACCIÓN</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (item of catalogos()[tipo]; track item.id) {
+        <div class="table-scroll">
+          <table>
+            <thead>
               <tr>
-                <td>{{ item.nombre }}</td>
+                <th>NOMBRE</th>
                 @if (tipo === 'talles') {
-                  <td>{{ item.orden }}</td>
+                  <th>ORDEN</th>
                 }
                 @if (tipo === 'colores') {
-                  <td>
-                    <span class="swatch" [style.background]="item.hexadecimal || '#eeeeee'"></span
-                    >{{ item.hexadecimal || 'Sin muestra' }}
-                  </td>
+                  <th>COLOR</th>
                 }
-                <td>
-                  <button class="link-button" (click)="editar(item)" [disabled]="guardando()">
-                    Editar {{ item.nombre }}
-                  </button>
-                </td>
+                <th>ACCIÓN</th>
               </tr>
-            } @empty {
-              <tr>
-                <td class="empty" colspan="3">Todavía no hay registros.</td>
-              </tr>
-            }
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              @for (item of catalogos()[tipo]; track item.id) {
+                <tr>
+                  <td>{{ item.nombre }}</td>
+                  @if (tipo === 'talles') {
+                    <td>{{ item.orden }}</td>
+                  }
+                  @if (tipo === 'colores') {
+                    <td>
+                      <span class="swatch" [style.background]="item.hexadecimal || '#eeeeee'"></span
+                      >{{ item.hexadecimal || 'Sin muestra' }}
+                    </td>
+                  }
+                  <td>
+                    <button class="link-button" (click)="editar(item)" [disabled]="guardando()">
+                      Editar {{ item.nombre }}
+                    </button>
+                  </td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td class="empty" colspan="3">Todavía no hay registros.</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
       }
     </section>
     <section class="panel catalog-form">

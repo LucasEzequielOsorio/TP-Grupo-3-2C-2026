@@ -629,6 +629,21 @@ h1 > span {
     width: 100%;
     margin: 10px 0 0;
   }
+  .category-tabs {
+    gap: 6px;
+    margin: 20px 0 16px;
+  }
+  .category-tabs button {
+    padding: 7px 12px;
+    font-size: 11px;
+  }
+  .catalog-pagination {
+    gap: 10px;
+  }
+  .catalog-pagination .shop-button {
+    padding: 10px 14px;
+    font-size: 11px;
+  }
 }
 .catalog-pagination {
   display: flex;
