@@ -85,7 +85,8 @@ if (process.env.SERVE_FRONTEND === 'true') {
     )
       return next();
     res.set('Cache-Control', 'no-store');
-    res.sendFile(index);
+    // Mantener el archivo relativo a su raíz también permite carpetas de trabajo ocultas.
+    res.sendFile('index.html', { root: frontend });
   });
 }
 app.use((req, res) => res.status(404).json({ mensaje: 'Ruta no encontrada' }));
